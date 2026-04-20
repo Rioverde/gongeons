@@ -1,5 +1,6 @@
 # Binaries
 /gongeons
+/assets/*
 /bin/
 /dist/
 *.exe

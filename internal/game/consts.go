@@ -14,7 +14,7 @@ const (
 	TerrainWater        Terrain = "water"
 	TerrainMountain     Terrain = "mountain"
 	TerrainForest       Terrain = "forest"
-	TerrainSwamp        Terrain = "swamp"
+	TerrainJungle       Terrain = "jungle"
 	TerrainCursedForest Terrain = "cursed_forest"
 	TerrainMeadow       Terrain = "meadow"
 

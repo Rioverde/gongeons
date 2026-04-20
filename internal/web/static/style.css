@@ -1,0 +1,96 @@
+:root {
+  --bg: #0b1220;
+  --panel: rgba(15, 23, 42, 0.85);
+  --border: #1e293b;
+  --text: #cbd5e1;
+  --muted: #94a3b8;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --input-bg: #0f172a;
+  --input-border: #334155;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+header {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  display: inline-flex;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+}
+
+header form, header .zoom {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+header input[type=number] {
+  width: 120px;
+  padding: 4px 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+header input[type=range] {
+  accent-color: var(--accent);
+}
+
+header button {
+  padding: 4px 10px;
+  background: var(--accent);
+  color: white;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+header button:hover {
+  background: var(--accent-hover);
+}
+
+.viewport {
+  overflow: auto;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.stage {
+  width: max-content;
+  margin: 0 auto;
+  padding: 80px 40px 40px 40px;
+}
+
+.world {
+  position: relative;
+  transform-origin: top left;
+}
+
+.world img {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  image-rendering: pixelated;
+}

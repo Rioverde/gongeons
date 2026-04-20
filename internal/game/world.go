@@ -28,3 +28,12 @@ func (w *World) GetTile(q, r int) (Tile, bool) {
 func (w *World) SetTile(q, r int, tile Tile) {
 	w.grid.Set(coord.NewAxial(q, r), tile)
 }
+
+// ForEach walks every tile in the world and calls fn with the tile's axial coordinates and value.
+// Iteration order is not guaranteed — callers that need a specific order should collect and sort.
+func (w *World) ForEach(fn func(q, r int, t Tile)) {
+	for it := w.grid.Iterator(); it.Next(); {
+		c := it.Index()
+		fn(c.Q(), c.R(), it.Item())
+	}
+}
