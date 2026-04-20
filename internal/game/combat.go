@@ -4,9 +4,14 @@ type Combatant interface {
 	// TakeDamage applies damage to the combatant, reducing their health accordingly.
 	TakeDamage(damage int)
 	// IsAlive checks if the combatant is still alive (i.e., has health greater than zero).
-	IsAlive() bool
+	Occupant
 	// GetStats returns the current stats of the combatant, including health and mana.
 	GetStats() Stats
+}
+
+type Occupant interface {
+	// IsAlive checks if the combatant is still alive (i.e., has health greater than zero).
+	IsAlive() bool
 }
 
 func Attack(attacker, defender Combatant) {
