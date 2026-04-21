@@ -356,3 +356,189 @@ func TestLookTileKnownAndUnknown(t *testing.T) {
 		t.Fatalf("lookTile(unknown) = %q, want %q", r, runeUnspecified)
 	}
 }
+
+// landmarkSnapshot builds a Snapshot that places the local player at
+// playerWorld and a landmark of the given kind at landmarkWorld. Both coords
+// must fit inside a viewport large enough to hold them; the helper creates a
+// viewport that spans both points with a small margin.
+func landmarkSnapshot(playerWorld, landmarkWorld game.Position, kind pb.LandmarkKind) *pb.Snapshot {
+	// Viewport origin is the top-left of the bounding box minus 1 tile of margin.
+	minX := playerWorld.X
+	if landmarkWorld.X < minX {
+		minX = landmarkWorld.X
+	}
+	minY := playerWorld.Y
+	if landmarkWorld.Y < minY {
+		minY = landmarkWorld.Y
+	}
+	origin := game.Position{X: minX - 1, Y: minY - 1}
+
+	maxX := playerWorld.X
+	if landmarkWorld.X > maxX {
+		maxX = landmarkWorld.X
+	}
+	maxY := playerWorld.Y
+	if landmarkWorld.Y > maxY {
+		maxY = landmarkWorld.Y
+	}
+	w := maxX - origin.X + 2
+	h := maxY - origin.Y + 2
+
+	tiles := make([]*pb.Tile, w*h)
+	for i := range tiles {
+		tiles[i] = &pb.Tile{Terrain: pb.Terrain_TERRAIN_PLAINS}
+	}
+
+	// Place landmark tile.
+	lx := landmarkWorld.X - origin.X
+	ly := landmarkWorld.Y - origin.Y
+	tiles[ly*w+lx] = &pb.Tile{
+		Terrain: pb.Terrain_TERRAIN_PLAINS,
+		Landmark: &pb.Landmark{
+			Kind: kind,
+			// A nil Name is safe: composeName returns "" for a nil NameParts.
+		},
+	}
+
+	return &pb.Snapshot{
+		Width:  int32(w),
+		Height: int32(h),
+		Origin: &pb.Position{X: int32(origin.X), Y: int32(origin.Y)},
+		Tiles:  tiles,
+		Entities: []*pb.Entity{
+			{
+				Id:       "me",
+				Name:     "hero",
+				Kind:     pb.OccupantKind_OCCUPANT_PLAYER,
+				Position: &pb.Position{X: int32(playerWorld.X), Y: int32(playerWorld.Y)},
+			},
+		},
+	}
+}
+
+// newLandmarkModel returns a Model ready for landmark-approach tests: the
+// player ID is "me" and the language is set to lang.
+func newLandmarkModel(lang string) *Model {
+	return &Model{
+		myID:    "me",
+		players: make(map[string]playerInfo),
+		lang:    lang,
+	}
+}
+
+// TestDetectLandmarkApproachFires verifies that a landmark 2 tiles (Chebyshev)
+// away from the player causes exactly one event-log line after applySnapshot.
+func TestDetectLandmarkApproachFires(t *testing.T) {
+	t.Parallel()
+	m := newLandmarkModel("en")
+	player := game.Position{X: 10, Y: 10}
+	lmPos := game.Position{X: 12, Y: 10} // Chebyshev distance 2
+
+	snap := landmarkSnapshot(player, lmPos, pb.LandmarkKind_LANDMARK_KIND_TOWER)
+	applySnapshot(m, snap)
+
+	if len(m.logLines) != 1 {
+		t.Fatalf("expected 1 log line, got %d: %v", len(m.logLines), m.logLines)
+	}
+	if !strings.Contains(m.logLines[0].Text, "tower") && !strings.Contains(m.logLines[0].Text, "Tower") && !strings.Contains(m.logLines[0].Text, "looms") {
+		t.Fatalf("approach log %q missing expected tower text", m.logLines[0].Text)
+	}
+}
+
+// TestDetectLandmarkApproachDebounced verifies that two consecutive snapshots
+// with the player still within approachRadius of the same landmark produce only
+// one log line — the second snapshot is suppressed by the debounce guard.
+func TestDetectLandmarkApproachDebounced(t *testing.T) {
+	t.Parallel()
+	m := newLandmarkModel("en")
+	player := game.Position{X: 10, Y: 10}
+	lmPos := game.Position{X: 12, Y: 10} // Chebyshev distance 2
+
+	snap := landmarkSnapshot(player, lmPos, pb.LandmarkKind_LANDMARK_KIND_TOWER)
+	applySnapshot(m, snap)
+	applySnapshot(m, snap) // identical second snapshot — must not re-fire
+
+	if len(m.logLines) != 1 {
+		t.Fatalf("expected 1 log line after duplicate snapshot, got %d: %v", len(m.logLines), m.logLines)
+	}
+}
+
+// TestDetectLandmarkApproachRearm verifies the full rearm cycle: approach fires,
+// player moves beyond approachExitRadius, then re-approach fires again.
+func TestDetectLandmarkApproachRearm(t *testing.T) {
+	t.Parallel()
+	m := newLandmarkModel("en")
+	lmPos := game.Position{X: 20, Y: 20}
+
+	// First snapshot: player 2 tiles away → fires.
+	near := game.Position{X: 18, Y: 20}
+	applySnapshot(m, landmarkSnapshot(near, lmPos, pb.LandmarkKind_LANDMARK_KIND_SHRINE))
+	if len(m.logLines) != 1 {
+		t.Fatalf("first approach: expected 1 log line, got %d", len(m.logLines))
+	}
+
+	// Second snapshot: player 6 tiles away (outside exit ring) → no new log.
+	far := game.Position{X: 14, Y: 20} // Chebyshev 6
+	applySnapshot(m, landmarkSnapshot(far, lmPos, pb.LandmarkKind_LANDMARK_KIND_SHRINE))
+	if len(m.logLines) != 1 {
+		t.Fatalf("after leaving: expected still 1 log line, got %d", len(m.logLines))
+	}
+
+	// Third snapshot: player 2 tiles away again → fires again (rearmed).
+	applySnapshot(m, landmarkSnapshot(near, lmPos, pb.LandmarkKind_LANDMARK_KIND_SHRINE))
+	if len(m.logLines) != 2 {
+		t.Fatalf("rearm approach: expected 2 log lines, got %d: %v", len(m.logLines), m.logLines)
+	}
+}
+
+// TestDetectLandmarkApproachSkipsNoneKind verifies that a tile carrying
+// LandmarkKind_NONE is ignored and produces no log line.
+func TestDetectLandmarkApproachSkipsNoneKind(t *testing.T) {
+	t.Parallel()
+	m := newLandmarkModel("en")
+	player := game.Position{X: 10, Y: 10}
+	lmPos := game.Position{X: 11, Y: 10} // only 1 tile away — very close
+
+	snap := landmarkSnapshot(player, lmPos, pb.LandmarkKind_LANDMARK_KIND_NONE)
+	applySnapshot(m, snap)
+
+	if len(m.logLines) != 0 {
+		t.Fatalf("NONE kind produced %d log lines, want 0: %v", len(m.logLines), m.logLines)
+	}
+}
+
+// TestDetectLandmarkApproachLocalizedEn verifies the approach log contains
+// expected English text (the tower message starts with "A tower looms").
+func TestDetectLandmarkApproachLocalizedEn(t *testing.T) {
+	t.Parallel()
+	m := newLandmarkModel("en")
+	player := game.Position{X: 10, Y: 10}
+	lmPos := game.Position{X: 12, Y: 10}
+
+	applySnapshot(m, landmarkSnapshot(player, lmPos, pb.LandmarkKind_LANDMARK_KIND_TOWER))
+
+	if len(m.logLines) != 1 {
+		t.Fatalf("expected 1 log line, got %d", len(m.logLines))
+	}
+	if !strings.Contains(m.logLines[0].Text, "looms") {
+		t.Fatalf("en approach log %q missing expected English verb 'looms'", m.logLines[0].Text)
+	}
+}
+
+// TestDetectLandmarkApproachLocalizedRu verifies the approach log contains
+// expected Russian text (the tower message contains "возвышается").
+func TestDetectLandmarkApproachLocalizedRu(t *testing.T) {
+	t.Parallel()
+	m := newLandmarkModel("ru")
+	player := game.Position{X: 10, Y: 10}
+	lmPos := game.Position{X: 12, Y: 10}
+
+	applySnapshot(m, landmarkSnapshot(player, lmPos, pb.LandmarkKind_LANDMARK_KIND_TOWER))
+
+	if len(m.logLines) != 1 {
+		t.Fatalf("expected 1 log line, got %d", len(m.logLines))
+	}
+	if !strings.Contains(m.logLines[0].Text, "возвышается") {
+		t.Fatalf("ru approach log %q missing expected Russian verb 'возвышается'", m.logLines[0].Text)
+	}
+}

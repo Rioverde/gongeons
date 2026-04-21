@@ -70,6 +70,16 @@ type logEntry struct {
 	Kind logKind
 }
 
+// approachedLandmark tracks the landmark the player most recently stepped
+// within approachRadius of, and whether the player has since left the debounce
+// ring (approachExitRadius). Used to suppress repeat "you approach" messages
+// until the player actually leaves and returns.
+type approachedLandmark struct {
+	coord   game.Position // anchor tile of the last-approached landmark
+	valid   bool          // false until the first approach happens
+	outside bool          // true after player moved past approachExitRadius
+}
+
 // newNameInput returns a focused, empty textinput.Model sized for the
 // enter-name screen. The bubbles model renders its own cursor and prompt;
 // we suppress its Prompt and render the localized name label (input.name_label)
@@ -129,6 +139,12 @@ type Model struct {
 	region          *pb.Region
 	lastRegionCoord game.SuperChunkCoord
 	initialised     bool
+
+	// approached tracks the landmark the player most recently stepped within
+	// approachRadius of, and whether the player has since left the debounce
+	// ring (approachExitRadius). Used to suppress repeat "you approach"
+	// messages until the player actually leaves and returns.
+	approached approachedLandmark
 
 	// World seed delivered by JoinAccepted. Stored read-only; used to drive
 	// the local influenceSource for per-tile tint sampling and the same
