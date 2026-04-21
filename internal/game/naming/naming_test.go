@@ -360,6 +360,43 @@ func TestDomainSaltCoverage(t *testing.T) {
 	}
 }
 
+// TestDrawIndex_StreamAdvance verifies that drawIndex(rng, 0) advances the PCG
+// stream by exactly one step — the same advance as a non-zero bound draw. Two
+// generators seeded identically are advanced via drawIndex, one with bound=0
+// and one with bound=10. The subsequent Uint64 call on each must differ from
+// the seed-state output, proving both generators consumed a step.
+func TestDrawIndex_StreamAdvance(t *testing.T) {
+	const state, stream uint64 = 0xdeadbeefcafebabe, 0x0123456789abcdef
+
+	// Capture the raw next value without any drawIndex call.
+	baseline := rand.New(rand.NewPCG(state, stream)).Uint64()
+
+	// Generator used with bound=0.
+	rngZero := rand.New(rand.NewPCG(state, stream))
+	drawIndex(rngZero, 0)
+	afterZero := rngZero.Uint64()
+
+	// Generator used with bound=10.
+	rngTen := rand.New(rand.NewPCG(state, stream))
+	drawIndex(rngTen, 10)
+	afterTen := rngTen.Uint64()
+
+	// Both generators must have consumed exactly one step: the next Uint64
+	// must differ from the baseline first output.
+	if afterZero == baseline {
+		t.Error("drawIndex(rng, 0) did not advance the stream: next Uint64 equals baseline")
+	}
+	if afterTen == baseline {
+		t.Error("drawIndex(rng, 10) did not advance the stream: next Uint64 equals baseline")
+	}
+
+	// Both draws consumed one step, so their post-draw states must be identical.
+	if afterZero != afterTen {
+		t.Errorf("stream position after drawIndex(0) and drawIndex(10) diverged: got %x vs %x",
+			afterZero, afterTen)
+	}
+}
+
 func BenchmarkGenerate(b *testing.B) {
 	bounds := testBounds()
 	in := Input{

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"math/rand/v2"
-	"strconv"
 
 	"github.com/Rioverde/gongeons/internal/game/naming"
 	"github.com/Rioverde/gongeons/internal/game/naming/markov"
@@ -34,22 +33,59 @@ func composeName(domain naming.Domain, p *pb.NameParts, lang string) string {
 	if p == nil {
 		return ""
 	}
-	d := string(domain)
 	body := localBody(p, lang)
 	switch p.GetFormat() {
 	case pb.NameFormat_NAME_FORMAT_BODY_ONLY:
 		return body
 	case pb.NameFormat_NAME_FORMAT_CHARACTER_PREFIX:
-		prefix := locale.Tr(lang,
-			d+".prefix."+p.GetCharacter()+"."+strconv.Itoa(int(p.GetPrefixIndex())))
-		return locale.Tr(lang, d+".name.character_prefix",
-			locale.ArgPrefix, prefix, locale.ArgBody, body)
+		prefixKey := prefixKeyFor(domain, p.GetCharacter(), uint8(p.GetPrefixIndex()))
+		prefix := locale.Tr(lang, prefixKey)
+		charPrefixKey := characterPrefixKeyFor(domain)
+		return locale.Tr(lang, charPrefixKey, locale.ArgPrefix, prefix, locale.ArgBody, body)
 	case pb.NameFormat_NAME_FORMAT_KIND_PATTERN:
-		key := d + ".name." + p.GetSubKind() + ".kind_pattern." +
-			strconv.Itoa(int(p.GetPatternIndex()))
-		return locale.Tr(lang, key, locale.ArgBody, body)
+		patternKey := patternKeyFor(domain, p.GetSubKind(), uint8(p.GetPatternIndex()))
+		return locale.Tr(lang, patternKey, locale.ArgBody, body)
 	}
 	return body
+}
+
+// prefixKeyFor returns the typed catalog key for the character-prefix
+// catalog entry, dispatching on domain. Returns an empty string for
+// unknown domains — composeName falls back to echoing the key, which
+// surfaces as a visible gap rather than a silent blank.
+func prefixKeyFor(d naming.Domain, character string, idx uint8) string {
+	switch d {
+	case naming.DomainRegion:
+		return locale.RegionPrefixKey(character, idx)
+	case naming.DomainLandmark:
+		return locale.LandmarkPrefixKey(character, idx)
+	}
+	return "" // unreachable for any production Domain
+}
+
+// patternKeyFor returns the typed catalog key for the kind-pattern
+// template entry, dispatching on domain.
+func patternKeyFor(d naming.Domain, subKind string, idx uint8) string {
+	switch d {
+	case naming.DomainRegion:
+		return locale.RegionNamePatternKey(subKind, idx)
+	case naming.DomainLandmark:
+		return locale.LandmarkNamePatternKey(subKind, idx)
+	}
+	return "" // unreachable for any production Domain
+}
+
+// characterPrefixKeyFor returns the catalog key for the
+// FormatCharacterPrefix assembly template ("{{.Prefix}} {{.Body}}"),
+// dispatching on domain.
+func characterPrefixKeyFor(d naming.Domain) string {
+	switch d {
+	case naming.DomainRegion:
+		return locale.KeyRegionNameCharacterPrefix
+	case naming.DomainLandmark:
+		return locale.KeyLandmarkNameCharacterPrefix
+	}
+	return "" // unreachable for any production Domain
 }
 
 // localBody reproduces the language-specific body text from a
