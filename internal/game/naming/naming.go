@@ -233,10 +233,16 @@ func pickFormat(rng *rand.Rand, w Weights) Format {
 // up even when downstream code discards one of them. The uint8 cap is
 // safe because every realistic catalog has fewer than 256 entries per
 // bucket.
+//
+// When bound ≤ 0 the stream is advanced via rng.Uint64() rather than
+// rng.IntN(1). Go's PCG implementation may optimize IntN(1) to return 0
+// without consuming a generator step; that would break cross-language
+// structural equality for any domain whose catalog has zero entries for
+// a given key. rng.Uint64() is guaranteed to advance the stream by
+// exactly one step.
 func drawIndex(rng *rand.Rand, bound int) uint8 {
 	if bound <= 0 {
-		// Advance the stream to keep the draw order fixed.
-		_ = rng.IntN(1)
+		_ = rng.Uint64() // guarantee stream advance — IntN(1) may short-circuit
 		return 0
 	}
 	return uint8(rng.IntN(bound))
