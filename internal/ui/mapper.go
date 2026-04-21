@@ -65,6 +65,7 @@ func applySnapshot(m *Model, s *pb.Snapshot) {
 	}
 
 	applyRegion(m, s.GetRegion())
+	m.detectLandmarkApproach()
 }
 
 // applyRegion folds the per-player region field from Snapshot into the
