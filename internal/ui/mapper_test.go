@@ -604,3 +604,191 @@ func TestDetectLandmarkApproachLocalizedRu(t *testing.T) {
 		t.Fatalf("ru approach log %q missing expected Russian verb 'возвышается'", m.logLines[0].Text)
 	}
 }
+
+// TestApplySnapshot_AdoptsGameTime verifies that a snapshot carrying a
+// valid GameTime (Month != MonthZero) overwrites the Model's cached
+// gameTime so the date HUD renders the server-authoritative position.
+func TestApplySnapshot_AdoptsGameTime(t *testing.T) {
+	t.Parallel()
+	m := newTestModel()
+
+	snap := &pb.Snapshot{
+		Width:  1,
+		Height: 1,
+		Origin: &pb.Position{X: 0, Y: 0},
+		Tiles:  []*pb.Tile{{Terrain: pb.Terrain_TERRAIN_PLAINS}},
+		GameTime: &pb.GameTime{
+			Year:       1042,
+			Month:      pb.CalendarMonth_CALENDAR_MONTH_OCTOBER,
+			DayOfMonth: 15,
+			Season:     pb.CalendarSeason_CALENDAR_SEASON_AUTUMN,
+		},
+	}
+	applySnapshot(m, snap)
+
+	want := game.GameTime{
+		Year:       1042,
+		Month:      game.MonthOctober,
+		DayOfMonth: 15,
+		Season:     game.SeasonAutumn,
+	}
+	if m.gameTime != want {
+		t.Errorf("gameTime after snapshot: got %+v, want %+v", m.gameTime, want)
+	}
+}
+
+// TestApplySnapshot_PreservesGameTimeWhenUnset verifies the MonthZero
+// guard: a snapshot without a calendar payload (legacy server or
+// calendar-less world) must NOT wipe a previously seeded gameTime,
+// otherwise a single calendar-less tick would blank the HUD.
+func TestApplySnapshot_PreservesGameTimeWhenUnset(t *testing.T) {
+	t.Parallel()
+	m := newTestModel()
+	m.gameTime = game.GameTime{
+		Year:       42,
+		Month:      game.MonthJune,
+		DayOfMonth: 3,
+		Season:     game.SeasonSummer,
+	}
+
+	snap := &pb.Snapshot{
+		Width:  1,
+		Height: 1,
+		Origin: &pb.Position{X: 0, Y: 0},
+		Tiles:  []*pb.Tile{{Terrain: pb.Terrain_TERRAIN_PLAINS}},
+		// GameTime omitted entirely.
+	}
+	applySnapshot(m, snap)
+
+	if m.gameTime.Month != game.MonthJune || m.gameTime.Year != 42 {
+		t.Errorf("gameTime after calendar-less snapshot: got %+v, want June Year 42 preserved", m.gameTime)
+	}
+}
+
+// TestTimeTickEvent_UpdatesGameTime verifies that applyEvent folds a
+// TimeTick payload into m.gameTime so a server-authoritative broadcast
+// advances the date HUD without a full snapshot round-trip.
+func TestTimeTickEvent_UpdatesGameTime(t *testing.T) {
+	t.Parallel()
+	m := newTestModel()
+
+	ev := &pb.Event{Payload: &pb.Event_TimeTick{TimeTick: &pb.TimeTick{
+		CurrentTick: 1234,
+		GameTime: &pb.GameTime{
+			Year:       7,
+			Month:      pb.CalendarMonth_CALENDAR_MONTH_MARCH,
+			DayOfMonth: 2,
+			Season:     pb.CalendarSeason_CALENDAR_SEASON_SPRING,
+		},
+	}}}
+	applyEvent(m, ev)
+
+	want := game.GameTime{
+		Year:       7,
+		Month:      game.MonthMarch,
+		DayOfMonth: 2,
+		Season:     game.SeasonSpring,
+	}
+	if m.gameTime != want {
+		t.Errorf("gameTime after TimeTickEvent: got %+v, want %+v", m.gameTime, want)
+	}
+}
+
+// TestTimeTickEvent_PreservesGameTimeWhenUnset verifies the zero-value
+// guard: a TimeTick carrying an empty GameTime (legacy payload or
+// server without a calendar) must NOT wipe a previously seeded
+// gameTime.
+func TestTimeTickEvent_PreservesGameTimeWhenUnset(t *testing.T) {
+	t.Parallel()
+	m := newTestModel()
+	m.gameTime = game.GameTime{
+		Year:       42,
+		Month:      game.MonthJune,
+		DayOfMonth: 3,
+		Season:     game.SeasonSummer,
+	}
+
+	ev := &pb.Event{Payload: &pb.Event_TimeTick{TimeTick: &pb.TimeTick{
+		CurrentTick: 99,
+		// GameTime omitted entirely.
+	}}}
+	applyEvent(m, ev)
+
+	if m.gameTime.Month != game.MonthJune || m.gameTime.Year != 42 {
+		t.Errorf("gameTime after calendar-less TimeTick: got %+v, want June Year 42 preserved", m.gameTime)
+	}
+}
+
+// TestCalendarConfigFromPB_IncludesEpochOffset verifies the wire
+// CalendarConfig's epoch offset reaches the client-side cache intact —
+// the field is what lets applyJoinAccepted build a game.Calendar
+// mirror aligned with the server's epoch jitter.
+func TestCalendarConfigFromPB_IncludesEpochOffset(t *testing.T) {
+	t.Parallel()
+	src := &pb.CalendarConfig{
+		TicksPerDay:     600,
+		DaysPerMonth:    10,
+		MonthsPerYear:   12,
+		EpochTickOffset: 12345,
+	}
+	got := calendarConfigFromPB(src)
+	want := calendarConfig{
+		TicksPerDay:     600,
+		DaysPerMonth:    10,
+		MonthsPerYear:   12,
+		EpochTickOffset: 12345,
+	}
+	if got != want {
+		t.Errorf("calendarConfigFromPB: got %+v, want %+v", got, want)
+	}
+}
+
+// TestApplyJoinAccepted_CachesCalendarConfig asserts the client caches
+// the raw cadence delivered in JoinAccepted so any future UI that
+// wants the cadence fields (progress rings, day/night visuals) can
+// read them without another round-trip. No local calendar mirror is
+// built — live calendar position comes from Snapshot.game_time and
+// TimeTick broadcasts, not client-side derivation.
+func TestApplyJoinAccepted_CachesCalendarConfig(t *testing.T) {
+	t.Parallel()
+	m := &Model{}
+	applyJoinAccepted(m, acceptedMsg{
+		PlayerID:  "p1",
+		WorldSeed: 42,
+		Calendar: calendarConfig{
+			TicksPerDay:     600,
+			DaysPerMonth:    10,
+			MonthsPerYear:   12,
+			EpochTickOffset: 12345,
+		},
+	})
+	want := calendarConfig{
+		TicksPerDay:     600,
+		DaysPerMonth:    10,
+		MonthsPerYear:   12,
+		EpochTickOffset: 12345,
+	}
+	if m.calendarCfg != want {
+		t.Errorf("calendarCfg after join: got %+v, want %+v", m.calendarCfg, want)
+	}
+}
+
+// TestApplyJoinAccepted_ZeroCalendar_NoSideEffect asserts that a
+// legacy server sending a zero-value CalendarConfig does not panic
+// and leaves m.gameTime at its zero value so the HUD suppresses until
+// a snapshot or TimeTick broadcast seeds a real position.
+func TestApplyJoinAccepted_ZeroCalendar_NoSideEffect(t *testing.T) {
+	t.Parallel()
+	m := &Model{}
+	applyJoinAccepted(m, acceptedMsg{
+		PlayerID:  "p1",
+		WorldSeed: 42,
+		Calendar:  calendarConfig{},
+	})
+	if m.calendarCfg != (calendarConfig{}) {
+		t.Errorf("zero calendar cfg: got %+v, want zero", m.calendarCfg)
+	}
+	if m.gameTime.Month != game.MonthZero {
+		t.Errorf("zero calendar must not seed gameTime: got %+v, want zero-value", m.gameTime)
+	}
+}

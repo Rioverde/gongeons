@@ -158,43 +158,104 @@ func (m *Model) viewDisconnected() string {
 	return m.centeredBox(styles.errBox, inner)
 }
 
-// viewPlaying composes the map (with embedded status strip), stats panel,
-// and events panel.
+// renderDateHUDRow renders the single-line in-world date banner shown
+// at the top of the map box (inside the border, above the tile grid).
+// Width is the inner content width of the map box; the date is
+// right-aligned with a single blank column of breathing room on both
+// sides so the look is symmetric with the in-map status strip.
+//
+// Returns a blank row of the same width (no content, just spaces) when
+// the calendar has not been configured (m.gameTime still carries the
+// zero GameTime — Month == MonthZero). Returning a filled-but-empty
+// row rather than an empty string keeps the map's vertical height
+// stable: the tile grid sits on the same row whether or not a calendar
+// has arrived.
+func (m *Model) renderDateHUDRow(width int) string {
+	if width <= 0 {
+		return ""
+	}
+	gt := m.gameTime
+	if gt.Month == game.MonthZero {
+		return strings.Repeat(" ", width)
+	}
+	monthKey := locale.CalendarMonthKey(gt.Month.Key())
+	if monthKey == "" {
+		return strings.Repeat(" ", width)
+	}
+	monthName := locale.Tr(m.lang, monthKey)
+	dateText := locale.Tr(m.lang, locale.KeyCalendarDateTemplate,
+		locale.ArgDay, int(gt.DayOfMonth),
+		locale.ArgMonth, monthName,
+		locale.ArgYear, int(gt.Year),
+	)
+	styled := seasonStyle(gt.Season).Render(dateText)
+	// Right-align via padBetween — empty left cell, date on the right.
+	return padBetween("", styled, width)
+}
+
+// seasonStyle returns the lipgloss style registered for s. Out-of-range
+// values fall through to an unstyled renderer so rendering never panics
+// on a Season value the client does not recognise.
+func seasonStyle(s game.Season) lipgloss.Style {
+	if st, ok := seasonStyles[s]; ok {
+		return st
+	}
+	return lipgloss.NewStyle()
+}
+
+// viewPlaying composes the map (with embedded date HUD header and
+// status strip), the stats panel, and the events panel.
 //
 // Wide layout (termWidth >= minTermWidth):
 //
 //	┌──────────────────────────────┐    ┌──────────────┐
-//	│                              │    │    Stats     │
+//	│                15 October... │    │              │
+//	│──────────────────────────────│    │    Stats     │
 //	│             Map              │    │              │
-//	│                              │    │ (no stats    │
-//	│──────────────────────────────│    │  yet)        │
+//	│                              │    │              │
+//	│──────────────────────────────│    │              │
 //	│ you: x │ region │ x,y │ ...  │    └──────────────┘
-//	└──────────────────────────────┘
-//	┌───────────────┐
-//	│    Events     │
-//	└───────────────┘
+//	└──────────────────────────────┘    ┌───────────────┐
+//	                                    │    Events     │
+//	                                    └───────────────┘
 //
-// The status strip lives inside the map box, separated from the tile grid
-// by a horizontal rule. No separate bottom bar; keybindings are removed
-// from the status line (discoverable via ? help).
+// The date HUD lives inside the map box (symmetric with the status
+// strip), so the left column has no external chrome above the map. The
+// status strip is unchanged. Events remain in the right column under
+// Stats with fill-to-column-height sizing.
 //
 // Narrow fallback (termWidth < minTermWidth) keeps a stacked layout so
 // the game remains usable on 60-column or smaller terminals.
 func (m *Model) viewPlaying() string {
 	if m.termWidth < minTermWidth {
-		// Narrow single-column layout: map / stats / log.
+		// Narrow single-column layout: map (with date HUD embedded) /
+		// stats / log. The narrow path uses renderLog (its own fixed-
+		// height panel) rather than renderEventsBox which now takes
+		// parameters.
 		grid := m.renderMapBox()
 		stats := m.renderStatsBox()
 		events := m.renderLog()
 		return lipgloss.JoinVertical(lipgloss.Left, grid, stats, events)
 	}
 
-	stats := m.renderStatsBox()
-	rightCol := lipgloss.JoinVertical(lipgloss.Left, stats)
+	// Wide layout. The map box now carries the date HUD internally, so
+	// the left column is just the map box. Events live in the RIGHT
+	// column under Stats — when log lines arrive, they grow inside the
+	// right column's fixed footprint rather than pushing the map up or
+	// down.
+	leftCol := m.renderMapBox()
 
-	mapBox := m.renderMapBox()
-	events := m.renderEventsBox()
-	leftCol := lipgloss.JoinVertical(lipgloss.Left, mapBox, events)
+	// Size Events to fill the rest of the right column so Stats+Events
+	// together match the left column's height pixel-for-pixel. Stats
+	// keeps its natural (non-stretched) size — it's a skills window
+	// and deliberately compact — so Events absorbs the remainder.
+	stats := m.renderStatsBox()
+	leftHeight := lipgloss.Height(leftCol)
+	statsHeight := lipgloss.Height(stats)
+	eventsInnerW := sidebarWidth - gridBoxChrome
+	eventsVisible := leftHeight - statsHeight - eventsBoxChromeV
+	events := m.renderEventsBox(eventsInnerW, eventsVisible)
+	rightCol := lipgloss.JoinVertical(lipgloss.Left, stats, events)
 
 	// Distribute horizontal slack evenly on both sides of the right column
 	// so it appears centred between the map's right edge and the terminal
@@ -332,25 +393,46 @@ func (m *Model) renderStatsBox() string {
 	return styles.playerL.Width(innerW).Render(b.String())
 }
 
-// renderMapBox wraps the tile grid and the three-row in-map status strip
-// in one lipgloss border box. The strip sits at the bottom of the box:
-// a blank spacer row for breathing room, then two info rows with left
-// and right values aligned to the respective edges.
+// renderMapBox wraps the tile grid, the in-world date HUD header, and
+// the in-map status strip in one lipgloss border box. Layout (top to
+// bottom, inside the border):
 //
 //	┌──────────────────────────────────────────┐
+//	│                         15 October, 1042 │  ← date HUD (header row)
+//	│ ──────────────────────────────────────── │  ← horizontal rule
 //	│  · · · tile grid · · ·                   │
-//	│                                          │
-//	│ Vinehollow              localhost:50051  │
-//	│ X: 7, Y: -30    w/↑ north · s/↓ south …  │
+//	│ ──────────────────────────────────────── │  ← horizontal rule
+//	│ Vinehollow              localhost:50051  │  ← status row 1
+//	│ X: 7, Y: -30    w/↑ north · s/↓ south …  │  ← status row 2
 //	└──────────────────────────────────────────┘
+//
+// The date HUD sits above the grid, symmetric with the status strip
+// below. A blank-but-sized row renders when the calendar has not yet
+// been configured so the grid's vertical position stays stable across
+// join-time transitions.
 func (m *Model) renderMapBox() string {
 	grid := m.renderGridContent()
-	status := m.renderInMapStatus(lipgloss.Width(grid))
-	inner := lipgloss.JoinVertical(lipgloss.Left, grid, status)
-	// Tight vertical padding (0 rows top+bottom) so the status strip sits
-	// directly under the tile grid and directly above the bottom border,
-	// without wasted dark space.
+	width := lipgloss.Width(grid)
+	header := m.renderDateHUDRow(width)
+	rule := horizontalRule(width)
+	status := m.renderInMapStatus(width)
+	inner := lipgloss.JoinVertical(lipgloss.Left, header, rule, grid, rule, status)
+	// Tight vertical padding (0 rows top+bottom) so the header sits
+	// directly under the top border and the status strip sits directly
+	// above the bottom border, without wasted dark space.
 	return styles.box.Padding(0, 2).Render(inner)
+}
+
+// horizontalRule returns a single-row line of box-drawing dashes of
+// exactly width cells. Used as a divider inside the map box between
+// the date HUD header, the tile grid, and the status strip. Styled
+// with styles.rule (soft white) rather than styles.status (yellow) so
+// the rule reads as neutral chrome and doesn't fatigue the eye.
+func horizontalRule(width int) string {
+	if width <= 0 {
+		return ""
+	}
+	return styles.rule.Render(strings.Repeat("─", width))
 }
 
 // renderInMapStatus returns the three-line status strip rendered inside
@@ -395,36 +477,35 @@ func padBetween(left, right string, totalWidth int) string {
 	return left + strings.Repeat(" ", gap) + right
 }
 
-// renderEventsBox renders the events panel below the map. Occupies the
-// left half of the map's horizontal span; the right half is reserved for
-// a future panel (inventory / combat / inspector). Widths are halved on
-// the content width so the two bordered boxes align to the map edges.
-// Each entry is coloured by its logKind: green for join, grey for leave,
-// default for everything else.
-func (m *Model) renderEventsBox() string {
+// renderEventsBox renders the events panel. innerW sets the inner
+// content width; visibleLines caps the number of log entries shown so
+// the caller can size the panel to fill remaining vertical space. Each
+// entry is coloured by its logKind: green for join, grey for leave,
+// default for everything else. When the panel has more visible-line
+// budget than log entries, the extra rows render as blank lines so the
+// bordered box still fills the target height.
+func (m *Model) renderEventsBox(innerW, visibleLines int) string {
 	header := locale.Tr(m.lang, locale.KeyPanelEventsHeader)
 	empty := locale.Tr(m.lang, locale.KeyPanelEmptyLog)
 
-	// Events occupies the LEFT HALF of the map's horizontal span.
-	leftColW := m.termWidth - sidebarWidth - columnGap
-	halfW := leftColW / 2
-	// Inner width: half column minus box chrome (1 border + 2 padding each side = 6 total).
-	innerW := halfW - gridBoxChrome
 	if innerW < 10 {
 		innerW = 10
 	}
-
-	// Visible line budget: panel height minus vertical chrome.
-	visibleLines := eventsRows - eventsBoxChromeV
 	if visibleLines < 1 {
 		visibleLines = 1
 	}
 
 	if len(m.logLines) == 0 {
-		return styles.log.Width(innerW).Render(header + "\n" + empty)
+		// Pad the empty panel to visibleLines so the box height stays
+		// stable when entries start arriving.
+		pad := visibleLines - 1 // header counts as one line, empty message as another below
+		if pad < 0 {
+			pad = 0
+		}
+		body := header + "\n" + empty + strings.Repeat("\n", pad)
+		return styles.log.Width(innerW).Render(body)
 	}
 
-	// Show the most recent visibleLines entries, newest at the bottom.
 	src := m.logLines
 	if len(src) > visibleLines {
 		src = src[len(src)-visibleLines:]
@@ -437,6 +518,14 @@ func (m *Model) renderEventsBox() string {
 		styled := logEntryStyle(entry).Render(wrapStyle.Render(entry.Text))
 		b.WriteString(styled)
 		b.WriteByte('\n')
+	}
+	// Pad with blank lines so the box height matches visibleLines even
+	// when fewer entries exist. Keeps the right column visually
+	// stable across rapid-movement bursts.
+	if extra := visibleLines - len(src); extra > 0 {
+		for range extra {
+			b.WriteByte('\n')
+		}
 	}
 	content := strings.TrimRight(b.String(), "\n")
 	return styles.log.Width(innerW).Render(content)

@@ -420,6 +420,149 @@ func (NameFormat) EnumDescriptor() ([]byte, []int) {
 	return file_gongeons_proto_rawDescGZIP(), []int{5}
 }
 
+// CalendarMonth enumerates the twelve calendar months. Numbered to
+// match the domain game.Month (1 = January … 12 = December) so the
+// translation in internal/server/mapper.go is a straight table lookup.
+// CALENDAR_MONTH_UNSPECIFIED = 0 keeps the proto3 zero-value sentinel
+// distinct from a real month so a missing GameTime decodes cleanly.
+type CalendarMonth int32
+
+const (
+	CalendarMonth_CALENDAR_MONTH_UNSPECIFIED CalendarMonth = 0
+	CalendarMonth_CALENDAR_MONTH_JANUARY     CalendarMonth = 1
+	CalendarMonth_CALENDAR_MONTH_FEBRUARY    CalendarMonth = 2
+	CalendarMonth_CALENDAR_MONTH_MARCH       CalendarMonth = 3
+	CalendarMonth_CALENDAR_MONTH_APRIL       CalendarMonth = 4
+	CalendarMonth_CALENDAR_MONTH_MAY         CalendarMonth = 5
+	CalendarMonth_CALENDAR_MONTH_JUNE        CalendarMonth = 6
+	CalendarMonth_CALENDAR_MONTH_JULY        CalendarMonth = 7
+	CalendarMonth_CALENDAR_MONTH_AUGUST      CalendarMonth = 8
+	CalendarMonth_CALENDAR_MONTH_SEPTEMBER   CalendarMonth = 9
+	CalendarMonth_CALENDAR_MONTH_OCTOBER     CalendarMonth = 10
+	CalendarMonth_CALENDAR_MONTH_NOVEMBER    CalendarMonth = 11
+	CalendarMonth_CALENDAR_MONTH_DECEMBER    CalendarMonth = 12
+)
+
+// Enum value maps for CalendarMonth.
+var (
+	CalendarMonth_name = map[int32]string{
+		0:  "CALENDAR_MONTH_UNSPECIFIED",
+		1:  "CALENDAR_MONTH_JANUARY",
+		2:  "CALENDAR_MONTH_FEBRUARY",
+		3:  "CALENDAR_MONTH_MARCH",
+		4:  "CALENDAR_MONTH_APRIL",
+		5:  "CALENDAR_MONTH_MAY",
+		6:  "CALENDAR_MONTH_JUNE",
+		7:  "CALENDAR_MONTH_JULY",
+		8:  "CALENDAR_MONTH_AUGUST",
+		9:  "CALENDAR_MONTH_SEPTEMBER",
+		10: "CALENDAR_MONTH_OCTOBER",
+		11: "CALENDAR_MONTH_NOVEMBER",
+		12: "CALENDAR_MONTH_DECEMBER",
+	}
+	CalendarMonth_value = map[string]int32{
+		"CALENDAR_MONTH_UNSPECIFIED": 0,
+		"CALENDAR_MONTH_JANUARY":     1,
+		"CALENDAR_MONTH_FEBRUARY":    2,
+		"CALENDAR_MONTH_MARCH":       3,
+		"CALENDAR_MONTH_APRIL":       4,
+		"CALENDAR_MONTH_MAY":         5,
+		"CALENDAR_MONTH_JUNE":        6,
+		"CALENDAR_MONTH_JULY":        7,
+		"CALENDAR_MONTH_AUGUST":      8,
+		"CALENDAR_MONTH_SEPTEMBER":   9,
+		"CALENDAR_MONTH_OCTOBER":     10,
+		"CALENDAR_MONTH_NOVEMBER":    11,
+		"CALENDAR_MONTH_DECEMBER":    12,
+	}
+)
+
+func (x CalendarMonth) Enum() *CalendarMonth {
+	p := new(CalendarMonth)
+	*p = x
+	return p
+}
+
+func (x CalendarMonth) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CalendarMonth) Descriptor() protoreflect.EnumDescriptor {
+	return file_gongeons_proto_enumTypes[6].Descriptor()
+}
+
+func (CalendarMonth) Type() protoreflect.EnumType {
+	return &file_gongeons_proto_enumTypes[6]
+}
+
+func (x CalendarMonth) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CalendarMonth.Descriptor instead.
+func (CalendarMonth) EnumDescriptor() ([]byte, []int) {
+	return file_gongeons_proto_rawDescGZIP(), []int{6}
+}
+
+// CalendarSeason enumerates the four calendar seasons. Numbered 1..4
+// so CALENDAR_SEASON_UNSPECIFIED = 0 remains the proto3 zero-value
+// sentinel; the domain game.Season iota starts at Winter = 0, so the
+// mapper translates through an explicit table rather than casting.
+type CalendarSeason int32
+
+const (
+	CalendarSeason_CALENDAR_SEASON_UNSPECIFIED CalendarSeason = 0
+	CalendarSeason_CALENDAR_SEASON_WINTER      CalendarSeason = 1
+	CalendarSeason_CALENDAR_SEASON_SPRING      CalendarSeason = 2
+	CalendarSeason_CALENDAR_SEASON_SUMMER      CalendarSeason = 3
+	CalendarSeason_CALENDAR_SEASON_AUTUMN      CalendarSeason = 4
+)
+
+// Enum value maps for CalendarSeason.
+var (
+	CalendarSeason_name = map[int32]string{
+		0: "CALENDAR_SEASON_UNSPECIFIED",
+		1: "CALENDAR_SEASON_WINTER",
+		2: "CALENDAR_SEASON_SPRING",
+		3: "CALENDAR_SEASON_SUMMER",
+		4: "CALENDAR_SEASON_AUTUMN",
+	}
+	CalendarSeason_value = map[string]int32{
+		"CALENDAR_SEASON_UNSPECIFIED": 0,
+		"CALENDAR_SEASON_WINTER":      1,
+		"CALENDAR_SEASON_SPRING":      2,
+		"CALENDAR_SEASON_SUMMER":      3,
+		"CALENDAR_SEASON_AUTUMN":      4,
+	}
+)
+
+func (x CalendarSeason) Enum() *CalendarSeason {
+	p := new(CalendarSeason)
+	*p = x
+	return p
+}
+
+func (x CalendarSeason) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CalendarSeason) Descriptor() protoreflect.EnumDescriptor {
+	return file_gongeons_proto_enumTypes[7].Descriptor()
+}
+
+func (CalendarSeason) Type() protoreflect.EnumType {
+	return &file_gongeons_proto_enumTypes[7]
+}
+
+func (x CalendarSeason) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CalendarSeason.Descriptor instead.
+func (CalendarSeason) EnumDescriptor() ([]byte, []int) {
+	return file_gongeons_proto_rawDescGZIP(), []int{7}
+}
+
 // Position is an absolute square-grid tile coordinate. Origin is arbitrary
 // (world 0, 0); the coordinate system is unbounded in both axes.
 type Position struct {
@@ -474,6 +617,169 @@ func (x *Position) GetY() int32 {
 	return 0
 }
 
+// GameTime is the decoded calendar position at a specific tick. All
+// fields are derived server-side from the world's currentTick via the
+// configured Calendar. Year may be negative (prehistory queries).
+// Month and DayOfMonth are 1-indexed for display parity with real-world
+// calendar conventions ("1 October, Year 1042"). TickOfDay is 0-indexed
+// in [0, ticksPerDay) for future sub-day rendering (day/night). Season
+// is derived from Month and sent on the wire so the client never has to
+// mirror the domain's SeasonOf mapping.
+type GameTime struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Year          int32                  `protobuf:"varint,1,opt,name=year,proto3" json:"year,omitempty"`
+	Month         CalendarMonth          `protobuf:"varint,2,opt,name=month,proto3,enum=gongeons.v1.CalendarMonth" json:"month,omitempty"`
+	DayOfMonth    int32                  `protobuf:"varint,3,opt,name=day_of_month,json=dayOfMonth,proto3" json:"day_of_month,omitempty"`
+	TickOfDay     int32                  `protobuf:"varint,4,opt,name=tick_of_day,json=tickOfDay,proto3" json:"tick_of_day,omitempty"`
+	Season        CalendarSeason         `protobuf:"varint,5,opt,name=season,proto3,enum=gongeons.v1.CalendarSeason" json:"season,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GameTime) Reset() {
+	*x = GameTime{}
+	mi := &file_gongeons_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GameTime) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GameTime) ProtoMessage() {}
+
+func (x *GameTime) ProtoReflect() protoreflect.Message {
+	mi := &file_gongeons_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GameTime.ProtoReflect.Descriptor instead.
+func (*GameTime) Descriptor() ([]byte, []int) {
+	return file_gongeons_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GameTime) GetYear() int32 {
+	if x != nil {
+		return x.Year
+	}
+	return 0
+}
+
+func (x *GameTime) GetMonth() CalendarMonth {
+	if x != nil {
+		return x.Month
+	}
+	return CalendarMonth_CALENDAR_MONTH_UNSPECIFIED
+}
+
+func (x *GameTime) GetDayOfMonth() int32 {
+	if x != nil {
+		return x.DayOfMonth
+	}
+	return 0
+}
+
+func (x *GameTime) GetTickOfDay() int32 {
+	if x != nil {
+		return x.TickOfDay
+	}
+	return 0
+}
+
+func (x *GameTime) GetSeason() CalendarSeason {
+	if x != nil {
+		return x.Season
+	}
+	return CalendarSeason_CALENDAR_SEASON_UNSPECIFIED
+}
+
+// CalendarConfig carries the immutable cadence of the server's
+// Calendar. Sent once in JoinAccepted so the client can compute
+// year/month lengths locally (e.g. a progress ring for "time until
+// next month") without a second round trip. Cadence is authoritative
+// from server — the client never invents its own.
+//
+// epoch_tick_offset is the server's calendar epoch — a per-world
+// seed-derived jitter so two worlds with different seeds do not both
+// start on "1 January, Year 0". Surfaced so the client can construct
+// its own game.Calendar mirror and derive GameTime locally between
+// snapshots via the Snapshot.current_tick anchor.
+type CalendarConfig struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TicksPerDay     int64                  `protobuf:"varint,1,opt,name=ticks_per_day,json=ticksPerDay,proto3" json:"ticks_per_day,omitempty"`
+	DaysPerMonth    int32                  `protobuf:"varint,2,opt,name=days_per_month,json=daysPerMonth,proto3" json:"days_per_month,omitempty"`
+	MonthsPerYear   int32                  `protobuf:"varint,3,opt,name=months_per_year,json=monthsPerYear,proto3" json:"months_per_year,omitempty"`
+	EpochTickOffset int64                  `protobuf:"varint,4,opt,name=epoch_tick_offset,json=epochTickOffset,proto3" json:"epoch_tick_offset,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CalendarConfig) Reset() {
+	*x = CalendarConfig{}
+	mi := &file_gongeons_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalendarConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalendarConfig) ProtoMessage() {}
+
+func (x *CalendarConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_gongeons_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalendarConfig.ProtoReflect.Descriptor instead.
+func (*CalendarConfig) Descriptor() ([]byte, []int) {
+	return file_gongeons_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CalendarConfig) GetTicksPerDay() int64 {
+	if x != nil {
+		return x.TicksPerDay
+	}
+	return 0
+}
+
+func (x *CalendarConfig) GetDaysPerMonth() int32 {
+	if x != nil {
+		return x.DaysPerMonth
+	}
+	return 0
+}
+
+func (x *CalendarConfig) GetMonthsPerYear() int32 {
+	if x != nil {
+		return x.MonthsPerYear
+	}
+	return 0
+}
+
+func (x *CalendarConfig) GetEpochTickOffset() int64 {
+	if x != nil {
+		return x.EpochTickOffset
+	}
+	return 0
+}
+
 // NameParts is the language-agnostic structured name carried on every
 // named entity (Region, Landmark, future Settlement). The client
 // composes the final display string locally: it looks up the template
@@ -495,7 +801,7 @@ type NameParts struct {
 
 func (x *NameParts) Reset() {
 	*x = NameParts{}
-	mi := &file_gongeons_proto_msgTypes[1]
+	mi := &file_gongeons_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -507,7 +813,7 @@ func (x *NameParts) String() string {
 func (*NameParts) ProtoMessage() {}
 
 func (x *NameParts) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[1]
+	mi := &file_gongeons_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -520,7 +826,7 @@ func (x *NameParts) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NameParts.ProtoReflect.Descriptor instead.
 func (*NameParts) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{1}
+	return file_gongeons_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *NameParts) GetCharacter() string {
@@ -578,7 +884,7 @@ type Landmark struct {
 
 func (x *Landmark) Reset() {
 	*x = Landmark{}
-	mi := &file_gongeons_proto_msgTypes[2]
+	mi := &file_gongeons_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -590,7 +896,7 @@ func (x *Landmark) String() string {
 func (*Landmark) ProtoMessage() {}
 
 func (x *Landmark) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[2]
+	mi := &file_gongeons_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -603,7 +909,7 @@ func (x *Landmark) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Landmark.ProtoReflect.Descriptor instead.
 func (*Landmark) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{2}
+	return file_gongeons_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Landmark) GetKind() LandmarkKind {
@@ -638,7 +944,7 @@ type RegionInfluence struct {
 
 func (x *RegionInfluence) Reset() {
 	*x = RegionInfluence{}
-	mi := &file_gongeons_proto_msgTypes[3]
+	mi := &file_gongeons_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -650,7 +956,7 @@ func (x *RegionInfluence) String() string {
 func (*RegionInfluence) ProtoMessage() {}
 
 func (x *RegionInfluence) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[3]
+	mi := &file_gongeons_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -663,7 +969,7 @@ func (x *RegionInfluence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegionInfluence.ProtoReflect.Descriptor instead.
 func (*RegionInfluence) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{3}
+	return file_gongeons_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *RegionInfluence) GetBlight() float32 {
@@ -729,7 +1035,7 @@ type Region struct {
 
 func (x *Region) Reset() {
 	*x = Region{}
-	mi := &file_gongeons_proto_msgTypes[4]
+	mi := &file_gongeons_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -741,7 +1047,7 @@ func (x *Region) String() string {
 func (*Region) ProtoMessage() {}
 
 func (x *Region) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[4]
+	mi := &file_gongeons_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -754,7 +1060,7 @@ func (x *Region) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Region.ProtoReflect.Descriptor instead.
 func (*Region) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{4}
+	return file_gongeons_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Region) GetSuperChunkX() int32 {
@@ -807,7 +1113,7 @@ type LocalizedMessage struct {
 
 func (x *LocalizedMessage) Reset() {
 	*x = LocalizedMessage{}
-	mi := &file_gongeons_proto_msgTypes[5]
+	mi := &file_gongeons_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -819,7 +1125,7 @@ func (x *LocalizedMessage) String() string {
 func (*LocalizedMessage) ProtoMessage() {}
 
 func (x *LocalizedMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[5]
+	mi := &file_gongeons_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -832,7 +1138,7 @@ func (x *LocalizedMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocalizedMessage.ProtoReflect.Descriptor instead.
 func (*LocalizedMessage) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{5}
+	return file_gongeons_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *LocalizedMessage) GetMessageId() string {
@@ -886,7 +1192,7 @@ type Tile struct {
 
 func (x *Tile) Reset() {
 	*x = Tile{}
-	mi := &file_gongeons_proto_msgTypes[6]
+	mi := &file_gongeons_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -898,7 +1204,7 @@ func (x *Tile) String() string {
 func (*Tile) ProtoMessage() {}
 
 func (x *Tile) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[6]
+	mi := &file_gongeons_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -911,7 +1217,7 @@ func (x *Tile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tile.ProtoReflect.Descriptor instead.
 func (*Tile) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{6}
+	return file_gongeons_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Tile) GetTerrain() Terrain {
@@ -970,7 +1276,7 @@ type Entity struct {
 
 func (x *Entity) Reset() {
 	*x = Entity{}
-	mi := &file_gongeons_proto_msgTypes[7]
+	mi := &file_gongeons_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -982,7 +1288,7 @@ func (x *Entity) String() string {
 func (*Entity) ProtoMessage() {}
 
 func (x *Entity) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[7]
+	mi := &file_gongeons_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -995,7 +1301,7 @@ func (x *Entity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Entity.ProtoReflect.Descriptor instead.
 func (*Entity) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{7}
+	return file_gongeons_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Entity) GetId() string {
@@ -1040,7 +1346,7 @@ type ClientMessage struct {
 
 func (x *ClientMessage) Reset() {
 	*x = ClientMessage{}
-	mi := &file_gongeons_proto_msgTypes[8]
+	mi := &file_gongeons_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1052,7 +1358,7 @@ func (x *ClientMessage) String() string {
 func (*ClientMessage) ProtoMessage() {}
 
 func (x *ClientMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[8]
+	mi := &file_gongeons_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1065,7 +1371,7 @@ func (x *ClientMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientMessage.ProtoReflect.Descriptor instead.
 func (*ClientMessage) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{8}
+	return file_gongeons_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ClientMessage) GetPayload() isClientMessage_Payload {
@@ -1144,7 +1450,7 @@ type CoreStats struct {
 
 func (x *CoreStats) Reset() {
 	*x = CoreStats{}
-	mi := &file_gongeons_proto_msgTypes[9]
+	mi := &file_gongeons_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1156,7 +1462,7 @@ func (x *CoreStats) String() string {
 func (*CoreStats) ProtoMessage() {}
 
 func (x *CoreStats) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[9]
+	mi := &file_gongeons_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1169,7 +1475,7 @@ func (x *CoreStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CoreStats.ProtoReflect.Descriptor instead.
 func (*CoreStats) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{9}
+	return file_gongeons_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CoreStats) GetStrength() int32 {
@@ -1235,7 +1541,7 @@ type JoinRequest struct {
 
 func (x *JoinRequest) Reset() {
 	*x = JoinRequest{}
-	mi := &file_gongeons_proto_msgTypes[10]
+	mi := &file_gongeons_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1247,7 +1553,7 @@ func (x *JoinRequest) String() string {
 func (*JoinRequest) ProtoMessage() {}
 
 func (x *JoinRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[10]
+	mi := &file_gongeons_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1260,7 +1566,7 @@ func (x *JoinRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinRequest.ProtoReflect.Descriptor instead.
 func (*JoinRequest) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{10}
+	return file_gongeons_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *JoinRequest) GetName() string {
@@ -1311,7 +1617,7 @@ type ViewportCmd struct {
 
 func (x *ViewportCmd) Reset() {
 	*x = ViewportCmd{}
-	mi := &file_gongeons_proto_msgTypes[11]
+	mi := &file_gongeons_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1323,7 +1629,7 @@ func (x *ViewportCmd) String() string {
 func (*ViewportCmd) ProtoMessage() {}
 
 func (x *ViewportCmd) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[11]
+	mi := &file_gongeons_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1336,7 +1642,7 @@ func (x *ViewportCmd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewportCmd.ProtoReflect.Descriptor instead.
 func (*ViewportCmd) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{11}
+	return file_gongeons_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ViewportCmd) GetWidth() int32 {
@@ -1365,7 +1671,7 @@ type MoveCmd struct {
 
 func (x *MoveCmd) Reset() {
 	*x = MoveCmd{}
-	mi := &file_gongeons_proto_msgTypes[12]
+	mi := &file_gongeons_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1377,7 +1683,7 @@ func (x *MoveCmd) String() string {
 func (*MoveCmd) ProtoMessage() {}
 
 func (x *MoveCmd) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[12]
+	mi := &file_gongeons_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1390,7 +1696,7 @@ func (x *MoveCmd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveCmd.ProtoReflect.Descriptor instead.
 func (*MoveCmd) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{12}
+	return file_gongeons_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *MoveCmd) GetDx() int32 {
@@ -1422,7 +1728,7 @@ type ServerMessage struct {
 
 func (x *ServerMessage) Reset() {
 	*x = ServerMessage{}
-	mi := &file_gongeons_proto_msgTypes[13]
+	mi := &file_gongeons_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1434,7 +1740,7 @@ func (x *ServerMessage) String() string {
 func (*ServerMessage) ProtoMessage() {}
 
 func (x *ServerMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[13]
+	mi := &file_gongeons_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1447,7 +1753,7 @@ func (x *ServerMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerMessage.ProtoReflect.Descriptor instead.
 func (*ServerMessage) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{13}
+	return file_gongeons_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ServerMessage) GetPayload() isServerMessage_Payload {
@@ -1527,17 +1833,22 @@ func (*ServerMessage_Error) isServerMessage_Payload() {}
 // client can construct a local region source for per-tile influence
 // sampling (cosmetic only, not authoritative state).
 type JoinAccepted struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PlayerId      string                 `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	Spawn         *Position              `protobuf:"bytes,2,opt,name=spawn,proto3" json:"spawn,omitempty"`
-	WorldSeed     int64                  `protobuf:"varint,3,opt,name=world_seed,json=worldSeed,proto3" json:"world_seed,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	PlayerId  string                 `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	Spawn     *Position              `protobuf:"bytes,2,opt,name=spawn,proto3" json:"spawn,omitempty"`
+	WorldSeed int64                  `protobuf:"varint,3,opt,name=world_seed,json=worldSeed,proto3" json:"world_seed,omitempty"`
+	// calendar is the server's immutable Calendar cadence. Sent once at
+	// join time so the client can compute in-game time locally (e.g.
+	// "ticks until next month") without a second round trip. Cadence is
+	// authoritative from server — the client never invents its own.
+	Calendar      *CalendarConfig `protobuf:"bytes,4,opt,name=calendar,proto3" json:"calendar,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *JoinAccepted) Reset() {
 	*x = JoinAccepted{}
-	mi := &file_gongeons_proto_msgTypes[14]
+	mi := &file_gongeons_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1549,7 +1860,7 @@ func (x *JoinAccepted) String() string {
 func (*JoinAccepted) ProtoMessage() {}
 
 func (x *JoinAccepted) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[14]
+	mi := &file_gongeons_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1562,7 +1873,7 @@ func (x *JoinAccepted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinAccepted.ProtoReflect.Descriptor instead.
 func (*JoinAccepted) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{14}
+	return file_gongeons_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *JoinAccepted) GetPlayerId() string {
@@ -1584,6 +1895,13 @@ func (x *JoinAccepted) GetWorldSeed() int64 {
 		return x.WorldSeed
 	}
 	return 0
+}
+
+func (x *JoinAccepted) GetCalendar() *CalendarConfig {
+	if x != nil {
+		return x.Calendar
+	}
+	return nil
 }
 
 // Snapshot is a viewport of the world. Width/height are tile counts; origin
@@ -1609,13 +1927,26 @@ type Snapshot struct {
 	// the denominator of the energy bar (e.g. "8/12") without hard-coding
 	// the server constant.
 	SelfEnergyCost int32 `protobuf:"varint,8,opt,name=self_energy_cost,json=selfEnergyCost,proto3" json:"self_energy_cost,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// game_time is the calendar position at the moment this snapshot was
+	// built. Derived server-side from World.currentTick via the configured
+	// Calendar; nil when the world has no Calendar wired (e.g. a test
+	// harness that skips WithCalendar). See CalendarConfig in
+	// JoinAccepted for the cadence the derivation ran against.
+	GameTime *GameTime `protobuf:"bytes,9,opt,name=game_time,json=gameTime,proto3" json:"game_time,omitempty"`
+	// current_tick is the monotonic server tick counter sampled at
+	// snapshot-build time. Pair it with the join-time CalendarConfig to
+	// extrapolate GameTime locally between snapshots using wall-clock
+	// elapsed since the last snapshot — so the calendar HUD keeps
+	// advancing smoothly even when the player sits still and the server
+	// is only sending snapshots on movement.
+	CurrentTick   int64 `protobuf:"varint,10,opt,name=current_tick,json=currentTick,proto3" json:"current_tick,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Snapshot) Reset() {
 	*x = Snapshot{}
-	mi := &file_gongeons_proto_msgTypes[15]
+	mi := &file_gongeons_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1627,7 +1958,7 @@ func (x *Snapshot) String() string {
 func (*Snapshot) ProtoMessage() {}
 
 func (x *Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[15]
+	mi := &file_gongeons_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1640,7 +1971,7 @@ func (x *Snapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Snapshot.ProtoReflect.Descriptor instead.
 func (*Snapshot) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{15}
+	return file_gongeons_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Snapshot) GetWidth() int32 {
@@ -1699,6 +2030,20 @@ func (x *Snapshot) GetSelfEnergyCost() int32 {
 	return 0
 }
 
+func (x *Snapshot) GetGameTime() *GameTime {
+	if x != nil {
+		return x.GameTime
+	}
+	return nil
+}
+
+func (x *Snapshot) GetCurrentTick() int64 {
+	if x != nil {
+		return x.CurrentTick
+	}
+	return 0
+}
+
 // Event is a domain event the server broadcasts to every connected client.
 // The client applies it to its local Model to stay in sync.
 type Event struct {
@@ -1709,6 +2054,7 @@ type Event struct {
 	//	*Event_PlayerLeft
 	//	*Event_EntityMoved
 	//	*Event_IntentFailed
+	//	*Event_TimeTick
 	Payload       isEvent_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1716,7 +2062,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_gongeons_proto_msgTypes[16]
+	mi := &file_gongeons_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1728,7 +2074,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[16]
+	mi := &file_gongeons_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1741,7 +2087,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{16}
+	return file_gongeons_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Event) GetPayload() isEvent_Payload {
@@ -1787,6 +2133,15 @@ func (x *Event) GetIntentFailed() *IntentFailed {
 	return nil
 }
 
+func (x *Event) GetTimeTick() *TimeTick {
+	if x != nil {
+		if x, ok := x.Payload.(*Event_TimeTick); ok {
+			return x.TimeTick
+		}
+	}
+	return nil
+}
+
 type isEvent_Payload interface {
 	isEvent_Payload()
 }
@@ -1807,6 +2162,10 @@ type Event_IntentFailed struct {
 	IntentFailed *IntentFailed `protobuf:"bytes,4,opt,name=intent_failed,json=intentFailed,proto3,oneof"`
 }
 
+type Event_TimeTick struct {
+	TimeTick *TimeTick `protobuf:"bytes,5,opt,name=time_tick,json=timeTick,proto3,oneof"`
+}
+
 func (*Event_PlayerJoined) isEvent_Payload() {}
 
 func (*Event_PlayerLeft) isEvent_Payload() {}
@@ -1814,6 +2173,66 @@ func (*Event_PlayerLeft) isEvent_Payload() {}
 func (*Event_EntityMoved) isEvent_Payload() {}
 
 func (*Event_IntentFailed) isEvent_Payload() {}
+
+func (*Event_TimeTick) isEvent_Payload() {}
+
+// TimeTick is a server-authoritative calendar broadcast. The server
+// emits one every N ticks (currently every 10 — once per wall-clock
+// second at the 10 Hz server cadence) so every connected client keeps
+// the date HUD in sync without round-tripping a full Snapshot. Carries
+// the current server tick counter plus the fully-derived GameTime so
+// the client never has to do any time math locally.
+type TimeTick struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CurrentTick   int64                  `protobuf:"varint,1,opt,name=current_tick,json=currentTick,proto3" json:"current_tick,omitempty"`
+	GameTime      *GameTime              `protobuf:"bytes,2,opt,name=game_time,json=gameTime,proto3" json:"game_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TimeTick) Reset() {
+	*x = TimeTick{}
+	mi := &file_gongeons_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TimeTick) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TimeTick) ProtoMessage() {}
+
+func (x *TimeTick) ProtoReflect() protoreflect.Message {
+	mi := &file_gongeons_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TimeTick.ProtoReflect.Descriptor instead.
+func (*TimeTick) Descriptor() ([]byte, []int) {
+	return file_gongeons_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *TimeTick) GetCurrentTick() int64 {
+	if x != nil {
+		return x.CurrentTick
+	}
+	return 0
+}
+
+func (x *TimeTick) GetGameTime() *GameTime {
+	if x != nil {
+		return x.GameTime
+	}
+	return nil
+}
 
 type PlayerJoined struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1824,7 +2243,7 @@ type PlayerJoined struct {
 
 func (x *PlayerJoined) Reset() {
 	*x = PlayerJoined{}
-	mi := &file_gongeons_proto_msgTypes[17]
+	mi := &file_gongeons_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1836,7 +2255,7 @@ func (x *PlayerJoined) String() string {
 func (*PlayerJoined) ProtoMessage() {}
 
 func (x *PlayerJoined) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[17]
+	mi := &file_gongeons_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1849,7 +2268,7 @@ func (x *PlayerJoined) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerJoined.ProtoReflect.Descriptor instead.
 func (*PlayerJoined) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{17}
+	return file_gongeons_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *PlayerJoined) GetEntity() *Entity {
@@ -1868,7 +2287,7 @@ type PlayerLeft struct {
 
 func (x *PlayerLeft) Reset() {
 	*x = PlayerLeft{}
-	mi := &file_gongeons_proto_msgTypes[18]
+	mi := &file_gongeons_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1880,7 +2299,7 @@ func (x *PlayerLeft) String() string {
 func (*PlayerLeft) ProtoMessage() {}
 
 func (x *PlayerLeft) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[18]
+	mi := &file_gongeons_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1893,7 +2312,7 @@ func (x *PlayerLeft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerLeft.ProtoReflect.Descriptor instead.
 func (*PlayerLeft) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{18}
+	return file_gongeons_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PlayerLeft) GetPlayerId() string {
@@ -1914,7 +2333,7 @@ type EntityMoved struct {
 
 func (x *EntityMoved) Reset() {
 	*x = EntityMoved{}
-	mi := &file_gongeons_proto_msgTypes[19]
+	mi := &file_gongeons_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1926,7 +2345,7 @@ func (x *EntityMoved) String() string {
 func (*EntityMoved) ProtoMessage() {}
 
 func (x *EntityMoved) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[19]
+	mi := &file_gongeons_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1939,7 +2358,7 @@ func (x *EntityMoved) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityMoved.ProtoReflect.Descriptor instead.
 func (*EntityMoved) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{19}
+	return file_gongeons_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *EntityMoved) GetEntityId() string {
@@ -1980,7 +2399,7 @@ type IntentFailed struct {
 
 func (x *IntentFailed) Reset() {
 	*x = IntentFailed{}
-	mi := &file_gongeons_proto_msgTypes[20]
+	mi := &file_gongeons_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1992,7 +2411,7 @@ func (x *IntentFailed) String() string {
 func (*IntentFailed) ProtoMessage() {}
 
 func (x *IntentFailed) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[20]
+	mi := &file_gongeons_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2005,7 +2424,7 @@ func (x *IntentFailed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntentFailed.ProtoReflect.Descriptor instead.
 func (*IntentFailed) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{20}
+	return file_gongeons_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *IntentFailed) GetEntityId() string {
@@ -2032,7 +2451,7 @@ type ErrorResponse struct {
 
 func (x *ErrorResponse) Reset() {
 	*x = ErrorResponse{}
-	mi := &file_gongeons_proto_msgTypes[21]
+	mi := &file_gongeons_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2044,7 +2463,7 @@ func (x *ErrorResponse) String() string {
 func (*ErrorResponse) ProtoMessage() {}
 
 func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_gongeons_proto_msgTypes[21]
+	mi := &file_gongeons_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2057,7 +2476,7 @@ func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorResponse.ProtoReflect.Descriptor instead.
 func (*ErrorResponse) Descriptor() ([]byte, []int) {
-	return file_gongeons_proto_rawDescGZIP(), []int{21}
+	return file_gongeons_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ErrorResponse) GetMessage() string {
@@ -2081,7 +2500,19 @@ const file_gongeons_proto_rawDesc = "" +
 	"\x0egongeons.proto\x12\vgongeons.v1\"&\n" +
 	"\bPosition\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
-	"\x01y\x18\x02 \x01(\x05R\x01y\"\xda\x01\n" +
+	"\x01y\x18\x02 \x01(\x05R\x01y\"\xc7\x01\n" +
+	"\bGameTime\x12\x12\n" +
+	"\x04year\x18\x01 \x01(\x05R\x04year\x120\n" +
+	"\x05month\x18\x02 \x01(\x0e2\x1a.gongeons.v1.CalendarMonthR\x05month\x12 \n" +
+	"\fday_of_month\x18\x03 \x01(\x05R\n" +
+	"dayOfMonth\x12\x1e\n" +
+	"\vtick_of_day\x18\x04 \x01(\x05R\ttickOfDay\x123\n" +
+	"\x06season\x18\x05 \x01(\x0e2\x1b.gongeons.v1.CalendarSeasonR\x06season\"\xae\x01\n" +
+	"\x0eCalendarConfig\x12\"\n" +
+	"\rticks_per_day\x18\x01 \x01(\x03R\vticksPerDay\x12$\n" +
+	"\x0edays_per_month\x18\x02 \x01(\x05R\fdaysPerMonth\x12&\n" +
+	"\x0fmonths_per_year\x18\x03 \x01(\x05R\rmonthsPerYear\x12*\n" +
+	"\x11epoch_tick_offset\x18\x04 \x01(\x03R\x0fepochTickOffset\"\xda\x01\n" +
 	"\tNameParts\x12\x1c\n" +
 	"\tcharacter\x18\x01 \x01(\tR\tcharacter\x12\x19\n" +
 	"\bsub_kind\x18\x02 \x01(\tR\asubKind\x12/\n" +
@@ -2153,12 +2584,13 @@ const file_gongeons_proto_rawDesc = "" +
 	"\bsnapshot\x18\x02 \x01(\v2\x15.gongeons.v1.SnapshotH\x00R\bsnapshot\x12*\n" +
 	"\x05event\x18\x03 \x01(\v2\x12.gongeons.v1.EventH\x00R\x05event\x122\n" +
 	"\x05error\x18\x04 \x01(\v2\x1a.gongeons.v1.ErrorResponseH\x00R\x05errorB\t\n" +
-	"\apayload\"w\n" +
+	"\apayload\"\xb0\x01\n" +
 	"\fJoinAccepted\x12\x1b\n" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12+\n" +
 	"\x05spawn\x18\x02 \x01(\v2\x15.gongeons.v1.PositionR\x05spawn\x12\x1d\n" +
 	"\n" +
-	"world_seed\x18\x03 \x01(\x03R\tworldSeed\"\xb9\x02\n" +
+	"world_seed\x18\x03 \x01(\x03R\tworldSeed\x127\n" +
+	"\bcalendar\x18\x04 \x01(\v2\x1b.gongeons.v1.CalendarConfigR\bcalendar\"\x90\x03\n" +
 	"\bSnapshot\x12\x14\n" +
 	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x02 \x01(\x05R\x06height\x12-\n" +
@@ -2168,14 +2600,21 @@ const file_gongeons_proto_rawDesc = "" +
 	"\x06region\x18\x06 \x01(\v2\x13.gongeons.v1.RegionR\x06region\x12\x1f\n" +
 	"\vself_energy\x18\a \x01(\x05R\n" +
 	"selfEnergy\x12(\n" +
-	"\x10self_energy_cost\x18\b \x01(\x05R\x0eselfEnergyCost\"\x91\x02\n" +
+	"\x10self_energy_cost\x18\b \x01(\x05R\x0eselfEnergyCost\x122\n" +
+	"\tgame_time\x18\t \x01(\v2\x15.gongeons.v1.GameTimeR\bgameTime\x12!\n" +
+	"\fcurrent_tick\x18\n" +
+	" \x01(\x03R\vcurrentTick\"\xc7\x02\n" +
 	"\x05Event\x12@\n" +
 	"\rplayer_joined\x18\x01 \x01(\v2\x19.gongeons.v1.PlayerJoinedH\x00R\fplayerJoined\x12:\n" +
 	"\vplayer_left\x18\x02 \x01(\v2\x17.gongeons.v1.PlayerLeftH\x00R\n" +
 	"playerLeft\x12=\n" +
 	"\fentity_moved\x18\x03 \x01(\v2\x18.gongeons.v1.EntityMovedH\x00R\ventityMoved\x12@\n" +
-	"\rintent_failed\x18\x04 \x01(\v2\x19.gongeons.v1.IntentFailedH\x00R\fintentFailedB\t\n" +
-	"\apayload\";\n" +
+	"\rintent_failed\x18\x04 \x01(\v2\x19.gongeons.v1.IntentFailedH\x00R\fintentFailed\x124\n" +
+	"\ttime_tick\x18\x05 \x01(\v2\x15.gongeons.v1.TimeTickH\x00R\btimeTickB\t\n" +
+	"\apayload\"a\n" +
+	"\bTimeTick\x12!\n" +
+	"\fcurrent_tick\x18\x01 \x01(\x03R\vcurrentTick\x122\n" +
+	"\tgame_time\x18\x02 \x01(\v2\x15.gongeons.v1.GameTimeR\bgameTime\";\n" +
 	"\fPlayerJoined\x12+\n" +
 	"\x06entity\x18\x01 \x01(\v2\x13.gongeons.v1.EntityR\x06entity\")\n" +
 	"\n" +
@@ -2244,7 +2683,28 @@ const file_gongeons_proto_rawDesc = "" +
 	"\x17NAME_FORMAT_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15NAME_FORMAT_BODY_ONLY\x10\x01\x12 \n" +
 	"\x1cNAME_FORMAT_CHARACTER_PREFIX\x10\x02\x12\x1c\n" +
-	"\x18NAME_FORMAT_KIND_PATTERN\x10\x032Q\n" +
+	"\x18NAME_FORMAT_KIND_PATTERN\x10\x03*\xf5\x02\n" +
+	"\rCalendarMonth\x12\x1e\n" +
+	"\x1aCALENDAR_MONTH_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16CALENDAR_MONTH_JANUARY\x10\x01\x12\x1b\n" +
+	"\x17CALENDAR_MONTH_FEBRUARY\x10\x02\x12\x18\n" +
+	"\x14CALENDAR_MONTH_MARCH\x10\x03\x12\x18\n" +
+	"\x14CALENDAR_MONTH_APRIL\x10\x04\x12\x16\n" +
+	"\x12CALENDAR_MONTH_MAY\x10\x05\x12\x17\n" +
+	"\x13CALENDAR_MONTH_JUNE\x10\x06\x12\x17\n" +
+	"\x13CALENDAR_MONTH_JULY\x10\a\x12\x19\n" +
+	"\x15CALENDAR_MONTH_AUGUST\x10\b\x12\x1c\n" +
+	"\x18CALENDAR_MONTH_SEPTEMBER\x10\t\x12\x1a\n" +
+	"\x16CALENDAR_MONTH_OCTOBER\x10\n" +
+	"\x12\x1b\n" +
+	"\x17CALENDAR_MONTH_NOVEMBER\x10\v\x12\x1b\n" +
+	"\x17CALENDAR_MONTH_DECEMBER\x10\f*\xa1\x01\n" +
+	"\x0eCalendarSeason\x12\x1f\n" +
+	"\x1bCALENDAR_SEASON_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16CALENDAR_SEASON_WINTER\x10\x01\x12\x1a\n" +
+	"\x16CALENDAR_SEASON_SPRING\x10\x02\x12\x1a\n" +
+	"\x16CALENDAR_SEASON_SUMMER\x10\x03\x12\x1a\n" +
+	"\x16CALENDAR_SEASON_AUTUMN\x10\x042Q\n" +
 	"\vGameService\x12B\n" +
 	"\x04Play\x12\x1a.gongeons.v1.ClientMessage\x1a\x1a.gongeons.v1.ServerMessage(\x010\x01B8Z6github.com/Rioverde/gongeons/internal/proto;gongeonspbb\x06proto3"
 
@@ -2260,8 +2720,8 @@ func file_gongeons_proto_rawDescGZIP() []byte {
 	return file_gongeons_proto_rawDescData
 }
 
-var file_gongeons_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_gongeons_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_gongeons_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_gongeons_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_gongeons_proto_goTypes = []any{
 	(Terrain)(0),             // 0: gongeons.v1.Terrain
 	(OccupantKind)(0),        // 1: gongeons.v1.OccupantKind
@@ -2269,71 +2729,82 @@ var file_gongeons_proto_goTypes = []any{
 	(LandmarkKind)(0),        // 3: gongeons.v1.LandmarkKind
 	(RegionCharacter)(0),     // 4: gongeons.v1.RegionCharacter
 	(NameFormat)(0),          // 5: gongeons.v1.NameFormat
-	(*Position)(nil),         // 6: gongeons.v1.Position
-	(*NameParts)(nil),        // 7: gongeons.v1.NameParts
-	(*Landmark)(nil),         // 8: gongeons.v1.Landmark
-	(*RegionInfluence)(nil),  // 9: gongeons.v1.RegionInfluence
-	(*Region)(nil),           // 10: gongeons.v1.Region
-	(*LocalizedMessage)(nil), // 11: gongeons.v1.LocalizedMessage
-	(*Tile)(nil),             // 12: gongeons.v1.Tile
-	(*Entity)(nil),           // 13: gongeons.v1.Entity
-	(*ClientMessage)(nil),    // 14: gongeons.v1.ClientMessage
-	(*CoreStats)(nil),        // 15: gongeons.v1.CoreStats
-	(*JoinRequest)(nil),      // 16: gongeons.v1.JoinRequest
-	(*ViewportCmd)(nil),      // 17: gongeons.v1.ViewportCmd
-	(*MoveCmd)(nil),          // 18: gongeons.v1.MoveCmd
-	(*ServerMessage)(nil),    // 19: gongeons.v1.ServerMessage
-	(*JoinAccepted)(nil),     // 20: gongeons.v1.JoinAccepted
-	(*Snapshot)(nil),         // 21: gongeons.v1.Snapshot
-	(*Event)(nil),            // 22: gongeons.v1.Event
-	(*PlayerJoined)(nil),     // 23: gongeons.v1.PlayerJoined
-	(*PlayerLeft)(nil),       // 24: gongeons.v1.PlayerLeft
-	(*EntityMoved)(nil),      // 25: gongeons.v1.EntityMoved
-	(*IntentFailed)(nil),     // 26: gongeons.v1.IntentFailed
-	(*ErrorResponse)(nil),    // 27: gongeons.v1.ErrorResponse
-	nil,                      // 28: gongeons.v1.LocalizedMessage.ArgsEntry
+	(CalendarMonth)(0),       // 6: gongeons.v1.CalendarMonth
+	(CalendarSeason)(0),      // 7: gongeons.v1.CalendarSeason
+	(*Position)(nil),         // 8: gongeons.v1.Position
+	(*GameTime)(nil),         // 9: gongeons.v1.GameTime
+	(*CalendarConfig)(nil),   // 10: gongeons.v1.CalendarConfig
+	(*NameParts)(nil),        // 11: gongeons.v1.NameParts
+	(*Landmark)(nil),         // 12: gongeons.v1.Landmark
+	(*RegionInfluence)(nil),  // 13: gongeons.v1.RegionInfluence
+	(*Region)(nil),           // 14: gongeons.v1.Region
+	(*LocalizedMessage)(nil), // 15: gongeons.v1.LocalizedMessage
+	(*Tile)(nil),             // 16: gongeons.v1.Tile
+	(*Entity)(nil),           // 17: gongeons.v1.Entity
+	(*ClientMessage)(nil),    // 18: gongeons.v1.ClientMessage
+	(*CoreStats)(nil),        // 19: gongeons.v1.CoreStats
+	(*JoinRequest)(nil),      // 20: gongeons.v1.JoinRequest
+	(*ViewportCmd)(nil),      // 21: gongeons.v1.ViewportCmd
+	(*MoveCmd)(nil),          // 22: gongeons.v1.MoveCmd
+	(*ServerMessage)(nil),    // 23: gongeons.v1.ServerMessage
+	(*JoinAccepted)(nil),     // 24: gongeons.v1.JoinAccepted
+	(*Snapshot)(nil),         // 25: gongeons.v1.Snapshot
+	(*Event)(nil),            // 26: gongeons.v1.Event
+	(*TimeTick)(nil),         // 27: gongeons.v1.TimeTick
+	(*PlayerJoined)(nil),     // 28: gongeons.v1.PlayerJoined
+	(*PlayerLeft)(nil),       // 29: gongeons.v1.PlayerLeft
+	(*EntityMoved)(nil),      // 30: gongeons.v1.EntityMoved
+	(*IntentFailed)(nil),     // 31: gongeons.v1.IntentFailed
+	(*ErrorResponse)(nil),    // 32: gongeons.v1.ErrorResponse
+	nil,                      // 33: gongeons.v1.LocalizedMessage.ArgsEntry
 }
 var file_gongeons_proto_depIdxs = []int32{
-	5,  // 0: gongeons.v1.NameParts.format:type_name -> gongeons.v1.NameFormat
-	3,  // 1: gongeons.v1.Landmark.kind:type_name -> gongeons.v1.LandmarkKind
-	7,  // 2: gongeons.v1.Landmark.name:type_name -> gongeons.v1.NameParts
-	4,  // 3: gongeons.v1.Region.character:type_name -> gongeons.v1.RegionCharacter
-	9,  // 4: gongeons.v1.Region.influence:type_name -> gongeons.v1.RegionInfluence
-	7,  // 5: gongeons.v1.Region.name:type_name -> gongeons.v1.NameParts
-	28, // 6: gongeons.v1.LocalizedMessage.args:type_name -> gongeons.v1.LocalizedMessage.ArgsEntry
-	0,  // 7: gongeons.v1.Tile.terrain:type_name -> gongeons.v1.Terrain
-	1,  // 8: gongeons.v1.Tile.occupant:type_name -> gongeons.v1.OccupantKind
-	2,  // 9: gongeons.v1.Tile.structure:type_name -> gongeons.v1.Structure
-	8,  // 10: gongeons.v1.Tile.landmark:type_name -> gongeons.v1.Landmark
-	1,  // 11: gongeons.v1.Entity.kind:type_name -> gongeons.v1.OccupantKind
-	6,  // 12: gongeons.v1.Entity.position:type_name -> gongeons.v1.Position
-	16, // 13: gongeons.v1.ClientMessage.join:type_name -> gongeons.v1.JoinRequest
-	18, // 14: gongeons.v1.ClientMessage.move:type_name -> gongeons.v1.MoveCmd
-	17, // 15: gongeons.v1.ClientMessage.viewport:type_name -> gongeons.v1.ViewportCmd
-	15, // 16: gongeons.v1.JoinRequest.stats:type_name -> gongeons.v1.CoreStats
-	20, // 17: gongeons.v1.ServerMessage.accepted:type_name -> gongeons.v1.JoinAccepted
-	21, // 18: gongeons.v1.ServerMessage.snapshot:type_name -> gongeons.v1.Snapshot
-	22, // 19: gongeons.v1.ServerMessage.event:type_name -> gongeons.v1.Event
-	27, // 20: gongeons.v1.ServerMessage.error:type_name -> gongeons.v1.ErrorResponse
-	6,  // 21: gongeons.v1.JoinAccepted.spawn:type_name -> gongeons.v1.Position
-	6,  // 22: gongeons.v1.Snapshot.origin:type_name -> gongeons.v1.Position
-	12, // 23: gongeons.v1.Snapshot.tiles:type_name -> gongeons.v1.Tile
-	13, // 24: gongeons.v1.Snapshot.entities:type_name -> gongeons.v1.Entity
-	10, // 25: gongeons.v1.Snapshot.region:type_name -> gongeons.v1.Region
-	23, // 26: gongeons.v1.Event.player_joined:type_name -> gongeons.v1.PlayerJoined
-	24, // 27: gongeons.v1.Event.player_left:type_name -> gongeons.v1.PlayerLeft
-	25, // 28: gongeons.v1.Event.entity_moved:type_name -> gongeons.v1.EntityMoved
-	26, // 29: gongeons.v1.Event.intent_failed:type_name -> gongeons.v1.IntentFailed
-	13, // 30: gongeons.v1.PlayerJoined.entity:type_name -> gongeons.v1.Entity
-	6,  // 31: gongeons.v1.EntityMoved.from:type_name -> gongeons.v1.Position
-	6,  // 32: gongeons.v1.EntityMoved.to:type_name -> gongeons.v1.Position
-	14, // 33: gongeons.v1.GameService.Play:input_type -> gongeons.v1.ClientMessage
-	19, // 34: gongeons.v1.GameService.Play:output_type -> gongeons.v1.ServerMessage
-	34, // [34:35] is the sub-list for method output_type
-	33, // [33:34] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	6,  // 0: gongeons.v1.GameTime.month:type_name -> gongeons.v1.CalendarMonth
+	7,  // 1: gongeons.v1.GameTime.season:type_name -> gongeons.v1.CalendarSeason
+	5,  // 2: gongeons.v1.NameParts.format:type_name -> gongeons.v1.NameFormat
+	3,  // 3: gongeons.v1.Landmark.kind:type_name -> gongeons.v1.LandmarkKind
+	11, // 4: gongeons.v1.Landmark.name:type_name -> gongeons.v1.NameParts
+	4,  // 5: gongeons.v1.Region.character:type_name -> gongeons.v1.RegionCharacter
+	13, // 6: gongeons.v1.Region.influence:type_name -> gongeons.v1.RegionInfluence
+	11, // 7: gongeons.v1.Region.name:type_name -> gongeons.v1.NameParts
+	33, // 8: gongeons.v1.LocalizedMessage.args:type_name -> gongeons.v1.LocalizedMessage.ArgsEntry
+	0,  // 9: gongeons.v1.Tile.terrain:type_name -> gongeons.v1.Terrain
+	1,  // 10: gongeons.v1.Tile.occupant:type_name -> gongeons.v1.OccupantKind
+	2,  // 11: gongeons.v1.Tile.structure:type_name -> gongeons.v1.Structure
+	12, // 12: gongeons.v1.Tile.landmark:type_name -> gongeons.v1.Landmark
+	1,  // 13: gongeons.v1.Entity.kind:type_name -> gongeons.v1.OccupantKind
+	8,  // 14: gongeons.v1.Entity.position:type_name -> gongeons.v1.Position
+	20, // 15: gongeons.v1.ClientMessage.join:type_name -> gongeons.v1.JoinRequest
+	22, // 16: gongeons.v1.ClientMessage.move:type_name -> gongeons.v1.MoveCmd
+	21, // 17: gongeons.v1.ClientMessage.viewport:type_name -> gongeons.v1.ViewportCmd
+	19, // 18: gongeons.v1.JoinRequest.stats:type_name -> gongeons.v1.CoreStats
+	24, // 19: gongeons.v1.ServerMessage.accepted:type_name -> gongeons.v1.JoinAccepted
+	25, // 20: gongeons.v1.ServerMessage.snapshot:type_name -> gongeons.v1.Snapshot
+	26, // 21: gongeons.v1.ServerMessage.event:type_name -> gongeons.v1.Event
+	32, // 22: gongeons.v1.ServerMessage.error:type_name -> gongeons.v1.ErrorResponse
+	8,  // 23: gongeons.v1.JoinAccepted.spawn:type_name -> gongeons.v1.Position
+	10, // 24: gongeons.v1.JoinAccepted.calendar:type_name -> gongeons.v1.CalendarConfig
+	8,  // 25: gongeons.v1.Snapshot.origin:type_name -> gongeons.v1.Position
+	16, // 26: gongeons.v1.Snapshot.tiles:type_name -> gongeons.v1.Tile
+	17, // 27: gongeons.v1.Snapshot.entities:type_name -> gongeons.v1.Entity
+	14, // 28: gongeons.v1.Snapshot.region:type_name -> gongeons.v1.Region
+	9,  // 29: gongeons.v1.Snapshot.game_time:type_name -> gongeons.v1.GameTime
+	28, // 30: gongeons.v1.Event.player_joined:type_name -> gongeons.v1.PlayerJoined
+	29, // 31: gongeons.v1.Event.player_left:type_name -> gongeons.v1.PlayerLeft
+	30, // 32: gongeons.v1.Event.entity_moved:type_name -> gongeons.v1.EntityMoved
+	31, // 33: gongeons.v1.Event.intent_failed:type_name -> gongeons.v1.IntentFailed
+	27, // 34: gongeons.v1.Event.time_tick:type_name -> gongeons.v1.TimeTick
+	9,  // 35: gongeons.v1.TimeTick.game_time:type_name -> gongeons.v1.GameTime
+	17, // 36: gongeons.v1.PlayerJoined.entity:type_name -> gongeons.v1.Entity
+	8,  // 37: gongeons.v1.EntityMoved.from:type_name -> gongeons.v1.Position
+	8,  // 38: gongeons.v1.EntityMoved.to:type_name -> gongeons.v1.Position
+	18, // 39: gongeons.v1.GameService.Play:input_type -> gongeons.v1.ClientMessage
+	23, // 40: gongeons.v1.GameService.Play:output_type -> gongeons.v1.ServerMessage
+	40, // [40:41] is the sub-list for method output_type
+	39, // [39:40] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_gongeons_proto_init() }
@@ -2341,30 +2812,31 @@ func file_gongeons_proto_init() {
 	if File_gongeons_proto != nil {
 		return
 	}
-	file_gongeons_proto_msgTypes[8].OneofWrappers = []any{
+	file_gongeons_proto_msgTypes[10].OneofWrappers = []any{
 		(*ClientMessage_Join)(nil),
 		(*ClientMessage_Move)(nil),
 		(*ClientMessage_Viewport)(nil),
 	}
-	file_gongeons_proto_msgTypes[13].OneofWrappers = []any{
+	file_gongeons_proto_msgTypes[15].OneofWrappers = []any{
 		(*ServerMessage_Accepted)(nil),
 		(*ServerMessage_Snapshot)(nil),
 		(*ServerMessage_Event)(nil),
 		(*ServerMessage_Error)(nil),
 	}
-	file_gongeons_proto_msgTypes[16].OneofWrappers = []any{
+	file_gongeons_proto_msgTypes[18].OneofWrappers = []any{
 		(*Event_PlayerJoined)(nil),
 		(*Event_PlayerLeft)(nil),
 		(*Event_EntityMoved)(nil),
 		(*Event_IntentFailed)(nil),
+		(*Event_TimeTick)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gongeons_proto_rawDesc), len(file_gongeons_proto_rawDesc)),
-			NumEnums:      6,
-			NumMessages:   23,
+			NumEnums:      8,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

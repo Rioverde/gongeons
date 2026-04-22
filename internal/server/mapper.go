@@ -116,6 +116,11 @@ func eventToServerMessage(e game.Event) *pb.ServerMessage {
 		}}}
 	case game.IntentFailedEvent:
 		ev = &pb.Event{Payload: &pb.Event_IntentFailed{IntentFailed: intentFailedPB(v)}}
+	case game.TimeTickEvent:
+		ev = &pb.Event{Payload: &pb.Event_TimeTick{TimeTick: &pb.TimeTick{
+			CurrentTick: v.CurrentTick,
+			GameTime:    gameTimeToPB(v.GameTime),
+		}}}
 	default:
 		return nil
 	}
@@ -282,6 +287,87 @@ func clampViewport(w, h int) (int, int) {
 	return max(w, MinViewportWidth), max(h, MinViewportHeight)
 }
 
+// monthPBMapping is the 1:1 translation table from the domain Month
+// enum to its wire counterpart. Domain values are 1-indexed
+// (MonthJanuary = 1 … MonthDecember = 12) so the table covers the twelve
+// real months; MonthZero has no wire entry and falls back to
+// CALENDAR_MONTH_UNSPECIFIED via lookupOr.
+var monthPBMapping = map[game.Month]pb.CalendarMonth{
+	game.MonthJanuary:   pb.CalendarMonth_CALENDAR_MONTH_JANUARY,
+	game.MonthFebruary:  pb.CalendarMonth_CALENDAR_MONTH_FEBRUARY,
+	game.MonthMarch:     pb.CalendarMonth_CALENDAR_MONTH_MARCH,
+	game.MonthApril:     pb.CalendarMonth_CALENDAR_MONTH_APRIL,
+	game.MonthMay:       pb.CalendarMonth_CALENDAR_MONTH_MAY,
+	game.MonthJune:      pb.CalendarMonth_CALENDAR_MONTH_JUNE,
+	game.MonthJuly:      pb.CalendarMonth_CALENDAR_MONTH_JULY,
+	game.MonthAugust:    pb.CalendarMonth_CALENDAR_MONTH_AUGUST,
+	game.MonthSeptember: pb.CalendarMonth_CALENDAR_MONTH_SEPTEMBER,
+	game.MonthOctober:   pb.CalendarMonth_CALENDAR_MONTH_OCTOBER,
+	game.MonthNovember:  pb.CalendarMonth_CALENDAR_MONTH_NOVEMBER,
+	game.MonthDecember:  pb.CalendarMonth_CALENDAR_MONTH_DECEMBER,
+}
+
+// monthToPB translates the domain Month enum to its wire counterpart.
+// The zero value (MonthZero) and any out-of-range value fall back to
+// CALENDAR_MONTH_UNSPECIFIED — the proto3 sentinel that marks an
+// uninitialised GameTime.
+func monthToPB(m game.Month) pb.CalendarMonth {
+	return lookupOr(monthPBMapping, m, pb.CalendarMonth_CALENDAR_MONTH_UNSPECIFIED)
+}
+
+// seasonPBMapping is the 1:1 translation table from the domain Season
+// enum to its wire counterpart. The domain iota starts at
+// SeasonWinter = 0 while the wire enum reserves 0 for UNSPECIFIED, so
+// the table is explicit rather than a cast; any out-of-range domain
+// value (corrupted memory) falls back to UNSPECIFIED via lookupOr.
+var seasonPBMapping = map[game.Season]pb.CalendarSeason{
+	game.SeasonWinter: pb.CalendarSeason_CALENDAR_SEASON_WINTER,
+	game.SeasonSpring: pb.CalendarSeason_CALENDAR_SEASON_SPRING,
+	game.SeasonSummer: pb.CalendarSeason_CALENDAR_SEASON_SUMMER,
+	game.SeasonAutumn: pb.CalendarSeason_CALENDAR_SEASON_AUTUMN,
+}
+
+// seasonToPB translates the domain Season enum to its wire counterpart.
+// Out-of-range values fall back to CALENDAR_SEASON_UNSPECIFIED so a
+// corrupted value renders as "no season" rather than as a wrong one.
+func seasonToPB(s game.Season) pb.CalendarSeason {
+	return lookupOr(seasonPBMapping, s, pb.CalendarSeason_CALENDAR_SEASON_UNSPECIFIED)
+}
+
+// gameTimeToPB converts a domain GameTime into its wire form. Returns a
+// non-nil pointer for every input — a zero-value GameTime maps through
+// UNSPECIFIED enums so callers never need to nil-check. Pairs with the
+// zero-calendar path on the server: a World without WithCalendar
+// returns GameTime{}, which wire-encodes to an all-zero pb.GameTime
+// that decodes cleanly on the client as "no calendar configured".
+func gameTimeToPB(gt game.GameTime) *pb.GameTime {
+	return &pb.GameTime{
+		Year:       gt.Year,
+		Month:      monthToPB(gt.Month),
+		DayOfMonth: gt.DayOfMonth,
+		TickOfDay:  gt.TickOfDay,
+		Season:     seasonToPB(gt.Season),
+	}
+}
+
+// calendarConfigToPB converts a domain Calendar into the wire
+// CalendarConfig carried in JoinAccepted. Returns a non-nil pointer
+// even for a zero-value Calendar (ticksPerDay = 0) so the wire layout
+// is uniform — a client reading ticks_per_day == 0 knows the server
+// has no Calendar wired without a separate null check.
+//
+// The epoch offset travels alongside the cadence fields so the client
+// can construct its own game.Calendar mirror and derive GameTime
+// locally between snapshots via the Snapshot.current_tick anchor.
+func calendarConfigToPB(c game.Calendar) *pb.CalendarConfig {
+	return &pb.CalendarConfig{
+		TicksPerDay:     c.TicksPerDay(),
+		DaysPerMonth:    int32(c.DaysPerMonth()),
+		MonthsPerYear:   int32(c.MonthsPerYear()),
+		EpochTickOffset: c.EpochTickOffset(),
+	}
+}
+
 // landmarkKindPBMapping is the 1:1 translation table from the domain
 // LandmarkKind enum to its wire counterpart. Kept as a map (not a switch)
 // so adding a new landmark kind stays a single-line change, matching the
@@ -388,12 +474,14 @@ func snapshotOf(w *game.World, center game.Position, viewW, viewH int, region *p
 		}
 	}
 	return &pb.Snapshot{
-		Width:    int32(viewW),
-		Height:   int32(viewH),
-		Origin:   positionPB(game.Position{X: originX, Y: originY}),
-		Tiles:    tiles,
-		Entities: entitiesOf(w),
-		Region:   region,
+		Width:       int32(viewW),
+		Height:      int32(viewH),
+		Origin:      positionPB(game.Position{X: originX, Y: originY}),
+		Tiles:       tiles,
+		Entities:    entitiesOf(w),
+		Region:      region,
+		GameTime:    gameTimeToPB(w.GameTime()),
+		CurrentTick: w.CurrentTick(),
 	}
 }
 
@@ -434,13 +522,16 @@ func errorResponse(msg, code string) *pb.ServerMessage {
 }
 
 // acceptedResponse is the initial JoinAccepted message carrying the assigned
-// id, the player's spawn position, and the world seed. Clients use the seed
-// to construct a local region source for per-tile influence sampling.
-func acceptedResponse(playerID string, spawn game.Position, worldSeed int64) *pb.ServerMessage {
+// id, the player's spawn position, the world seed, and the server's
+// Calendar cadence. Clients use the seed to construct a local region
+// source for per-tile influence sampling and the CalendarConfig to
+// render in-game time locally.
+func acceptedResponse(playerID string, spawn game.Position, worldSeed int64, cal game.Calendar) *pb.ServerMessage {
 	return &pb.ServerMessage{Payload: &pb.ServerMessage_Accepted{Accepted: &pb.JoinAccepted{
 		PlayerId:  playerID,
 		Spawn:     positionPB(spawn),
 		WorldSeed: worldSeed,
+		Calendar:  calendarConfigToPB(cal),
 	}}}
 }
 

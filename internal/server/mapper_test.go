@@ -373,3 +373,342 @@ func TestTerrainToPB_VolcanicMapping(t *testing.T) {
 	}
 }
 
+// TestGameTimeToPB_RoundTrip verifies gameTimeToPB copies every scalar
+// field verbatim and routes Month / Season through the translation
+// tables so a known domain fixture matches its expected wire form
+// field-for-field.
+func TestGameTimeToPB_RoundTrip(t *testing.T) {
+	gt := game.GameTime{
+		Year:       1042,
+		Month:      game.MonthOctober,
+		DayOfMonth: 7,
+		TickOfDay:  123,
+		Season:     game.SeasonAutumn,
+	}
+	want := &pb.GameTime{
+		Year:       1042,
+		Month:      pb.CalendarMonth_CALENDAR_MONTH_OCTOBER,
+		DayOfMonth: 7,
+		TickOfDay:  123,
+		Season:     pb.CalendarSeason_CALENDAR_SEASON_AUTUMN,
+	}
+	got := gameTimeToPB(gt)
+
+	opts := []cmp.Option{protocmp.Transform()}
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
+		t.Fatalf("gameTimeToPB mismatch (-want +got):\n%s", diff)
+	}
+}
+
+// TestMonthToPB_CoversEveryMonth verifies every valid domain Month maps
+// to its specific wire counterpart — never to UNSPECIFIED. A regression
+// here would surface as a client rendering the calendar with blank
+// month labels.
+func TestMonthToPB_CoversEveryMonth(t *testing.T) {
+	cases := map[game.Month]pb.CalendarMonth{
+		game.MonthJanuary:   pb.CalendarMonth_CALENDAR_MONTH_JANUARY,
+		game.MonthFebruary:  pb.CalendarMonth_CALENDAR_MONTH_FEBRUARY,
+		game.MonthMarch:     pb.CalendarMonth_CALENDAR_MONTH_MARCH,
+		game.MonthApril:     pb.CalendarMonth_CALENDAR_MONTH_APRIL,
+		game.MonthMay:       pb.CalendarMonth_CALENDAR_MONTH_MAY,
+		game.MonthJune:      pb.CalendarMonth_CALENDAR_MONTH_JUNE,
+		game.MonthJuly:      pb.CalendarMonth_CALENDAR_MONTH_JULY,
+		game.MonthAugust:    pb.CalendarMonth_CALENDAR_MONTH_AUGUST,
+		game.MonthSeptember: pb.CalendarMonth_CALENDAR_MONTH_SEPTEMBER,
+		game.MonthOctober:   pb.CalendarMonth_CALENDAR_MONTH_OCTOBER,
+		game.MonthNovember:  pb.CalendarMonth_CALENDAR_MONTH_NOVEMBER,
+		game.MonthDecember:  pb.CalendarMonth_CALENDAR_MONTH_DECEMBER,
+	}
+	for in, want := range cases {
+		got := monthToPB(in)
+		if got == pb.CalendarMonth_CALENDAR_MONTH_UNSPECIFIED {
+			t.Errorf("monthToPB(%v) returned UNSPECIFIED, want %v", in, want)
+		}
+		if got != want {
+			t.Errorf("monthToPB(%v): want %v, got %v", in, want, got)
+		}
+	}
+	// MonthZero is the "not set" sentinel; expect UNSPECIFIED.
+	if got := monthToPB(game.MonthZero); got != pb.CalendarMonth_CALENDAR_MONTH_UNSPECIFIED {
+		t.Errorf("monthToPB(MonthZero): want UNSPECIFIED, got %v", got)
+	}
+}
+
+// TestSeasonToPB_CoversEverySeason verifies every valid domain Season
+// maps to its specific wire counterpart — never to UNSPECIFIED. A
+// regression here would mean season-tinted UI renders as uncoloured.
+func TestSeasonToPB_CoversEverySeason(t *testing.T) {
+	cases := map[game.Season]pb.CalendarSeason{
+		game.SeasonWinter: pb.CalendarSeason_CALENDAR_SEASON_WINTER,
+		game.SeasonSpring: pb.CalendarSeason_CALENDAR_SEASON_SPRING,
+		game.SeasonSummer: pb.CalendarSeason_CALENDAR_SEASON_SUMMER,
+		game.SeasonAutumn: pb.CalendarSeason_CALENDAR_SEASON_AUTUMN,
+	}
+	for in, want := range cases {
+		got := seasonToPB(in)
+		if got == pb.CalendarSeason_CALENDAR_SEASON_UNSPECIFIED {
+			t.Errorf("seasonToPB(%v) returned UNSPECIFIED, want %v", in, want)
+		}
+		if got != want {
+			t.Errorf("seasonToPB(%v): want %v, got %v", in, want, got)
+		}
+	}
+}
+
+// TestCalendarConfigToPB verifies calendarConfigToPB copies the three
+// cadence values into the wire shape. Uses DefaultCalendarConfig so a
+// future tuning change in the domain ripples into this assertion.
+func TestCalendarConfigToPB(t *testing.T) {
+	const epoch = int64(987654321)
+	cal := game.NewCalendar(
+		game.DefaultCalendarConfig.TicksPerDay,
+		game.DefaultCalendarConfig.DaysPerMonth,
+		game.DefaultCalendarConfig.MonthsPerYear,
+		epoch,
+	)
+	want := &pb.CalendarConfig{
+		TicksPerDay:     game.DefaultCalendarConfig.TicksPerDay,
+		DaysPerMonth:    int32(game.DefaultCalendarConfig.DaysPerMonth),
+		MonthsPerYear:   int32(game.DefaultCalendarConfig.MonthsPerYear),
+		EpochTickOffset: epoch,
+	}
+	got := calendarConfigToPB(cal)
+
+	opts := []cmp.Option{protocmp.Transform()}
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
+		t.Fatalf("calendarConfigToPB mismatch (-want +got):\n%s", diff)
+	}
+}
+
+// TestSnapshotOf_IncludesGameTime verifies snapshotOf populates
+// GameTime from the world's configured Calendar. With
+// NewCalendar(600, 10, 12, 0) and a freshly built world, Derive(0)
+// yields Year 0, January, DayOfMonth 1 — that's what must reach the
+// wire.
+func TestSnapshotOf_IncludesGameTime(t *testing.T) {
+	centre := game.Position{X: 0, Y: 0}
+	cal := game.NewCalendar(600, 10, 12, 0)
+	w := game.NewWorldFromSource(plainsTileSource{}, game.WithCalendar(cal))
+
+	snap := snapshotOf(w, centre, DefaultViewportWidth, DefaultViewportHeight, nil, nil, nil)
+
+	gt := snap.GetGameTime()
+	if gt == nil {
+		t.Fatalf("snapshot GameTime is nil, want populated")
+	}
+	if gt.GetYear() != 0 {
+		t.Errorf("GameTime.Year: want 0, got %d", gt.GetYear())
+	}
+	if gt.GetMonth() != pb.CalendarMonth_CALENDAR_MONTH_JANUARY {
+		t.Errorf("GameTime.Month: want JANUARY, got %v", gt.GetMonth())
+	}
+	if gt.GetDayOfMonth() != 1 {
+		t.Errorf("GameTime.DayOfMonth: want 1, got %d", gt.GetDayOfMonth())
+	}
+	if gt.GetTickOfDay() != 0 {
+		t.Errorf("GameTime.TickOfDay: want 0, got %d", gt.GetTickOfDay())
+	}
+	if gt.GetSeason() != pb.CalendarSeason_CALENDAR_SEASON_WINTER {
+		t.Errorf("GameTime.Season: want WINTER (Jan is winter), got %v", gt.GetSeason())
+	}
+	// CurrentTick on a fresh world is 0 — the snapshot carries the
+	// raw counter so the client can extrapolate GameTime between
+	// snapshots via wall-clock elapsed × server tick rate.
+	if got := snap.GetCurrentTick(); got != 0 {
+		t.Errorf("Snapshot.CurrentTick on fresh world: got %d, want 0", got)
+	}
+}
+
+// TestSnapshotOf_IncludesCurrentTick asserts Snapshot.CurrentTick
+// tracks the world's tick counter — after N manual Tick calls the wire
+// field equals N. This is the anchor the client uses to extrapolate
+// GameTime between snapshots.
+func TestSnapshotOf_IncludesCurrentTick(t *testing.T) {
+	centre := game.Position{X: 0, Y: 0}
+	cal := game.NewCalendar(600, 10, 12, 0)
+	w := game.NewWorldFromSource(plainsTileSource{}, game.WithCalendar(cal))
+
+	const want = 5
+	for i := 0; i < want; i++ {
+		w.Tick()
+	}
+
+	snap := snapshotOf(w, centre, DefaultViewportWidth, DefaultViewportHeight, nil, nil, nil)
+	if got := snap.GetCurrentTick(); got != int64(want) {
+		t.Errorf("Snapshot.CurrentTick after %d ticks: got %d, want %d", want, got, want)
+	}
+}
+
+// TestSnapshotOf_NoCalendar_EmitsZeroGameTime verifies a World built
+// without WithCalendar emits the zero-value GameTime on the wire:
+// every numeric field zero, Month = UNSPECIFIED (the discriminator the
+// client checks to detect "server has no calendar"). Season is the
+// documented exception: the domain enum is iota-based with
+// SeasonWinter = 0, so the zero-value Season maps through
+// seasonPBMapping to CALENDAR_SEASON_WINTER rather than UNSPECIFIED.
+// Clients keying off calendar presence must inspect Month, not Season.
+func TestSnapshotOf_NoCalendar_EmitsZeroGameTime(t *testing.T) {
+	centre := game.Position{X: 0, Y: 0}
+	w := game.NewWorldFromSource(plainsTileSource{})
+
+	snap := snapshotOf(w, centre, DefaultViewportWidth, DefaultViewportHeight, nil, nil, nil)
+
+	gt := snap.GetGameTime()
+	if gt == nil {
+		t.Fatalf("snapshot GameTime is nil, want non-nil zero value")
+	}
+	if gt.GetYear() != 0 {
+		t.Errorf("GameTime.Year: want 0, got %d", gt.GetYear())
+	}
+	if gt.GetMonth() != pb.CalendarMonth_CALENDAR_MONTH_UNSPECIFIED {
+		t.Errorf("GameTime.Month: want UNSPECIFIED, got %v", gt.GetMonth())
+	}
+	if gt.GetDayOfMonth() != 0 {
+		t.Errorf("GameTime.DayOfMonth: want 0, got %d", gt.GetDayOfMonth())
+	}
+	if gt.GetTickOfDay() != 0 {
+		t.Errorf("GameTime.TickOfDay: want 0, got %d", gt.GetTickOfDay())
+	}
+	// Season falls out of the iota-based domain enum as SeasonWinter
+	// (value 0); the mapper reports that faithfully. The calendar-
+	// presence discriminator is Month, not Season.
+	if gt.GetSeason() != pb.CalendarSeason_CALENDAR_SEASON_WINTER {
+		t.Errorf("GameTime.Season: want WINTER (domain zero-value), got %v", gt.GetSeason())
+	}
+}
+
+// TestEventToServerMessage_TimeTick verifies the mapper wraps a domain
+// TimeTickEvent in the right oneof branches and carries the GameTime
+// payload intact. Catches any future drift in the wire shape
+// independently of the DoTick emission cadence.
+func TestEventToServerMessage_TimeTick(t *testing.T) {
+	t.Parallel()
+	ev := game.TimeTickEvent{
+		CurrentTick: 42,
+		GameTime: game.GameTime{
+			Year:       1042,
+			Month:      game.MonthOctober,
+			DayOfMonth: 15,
+			TickOfDay:  120,
+			Season:     game.SeasonAutumn,
+		},
+		AtTick: 42,
+	}
+	msg := eventToServerMessage(ev)
+	if msg == nil {
+		t.Fatalf("eventToServerMessage(TimeTickEvent) returned nil")
+	}
+	tt := msg.GetEvent().GetTimeTick()
+	if tt == nil {
+		t.Fatalf("expected TimeTick payload, got %T", msg.GetEvent().GetPayload())
+	}
+	if tt.GetCurrentTick() != 42 {
+		t.Errorf("TimeTick.CurrentTick: got %d, want 42", tt.GetCurrentTick())
+	}
+	gt := tt.GetGameTime()
+	if gt == nil {
+		t.Fatalf("TimeTick.GameTime is nil, want populated")
+	}
+	if gt.GetMonth() != pb.CalendarMonth_CALENDAR_MONTH_OCTOBER {
+		t.Errorf("TimeTick.GameTime.Month: got %v, want OCTOBER", gt.GetMonth())
+	}
+	if gt.GetDayOfMonth() != 15 {
+		t.Errorf("TimeTick.GameTime.DayOfMonth: got %d, want 15", gt.GetDayOfMonth())
+	}
+	if gt.GetSeason() != pb.CalendarSeason_CALENDAR_SEASON_AUTUMN {
+		t.Errorf("TimeTick.GameTime.Season: got %v, want AUTUMN", gt.GetSeason())
+	}
+}
+
+// TestDoTick_EmitsTimeTickEverySecond verifies Service.DoTick fans out
+// a TimeTick broadcast once per wall-clock second — i.e. exactly when
+// CurrentTick is a multiple of 10 under the 10 Hz server cadence.
+// Ticking 20 times must produce exactly 2 TimeTick broadcasts (on
+// tick 10 and tick 20); the test subscribes to the service's hub so
+// the same broadcast path the client sees is exercised.
+func TestDoTick_EmitsTimeTickEverySecond(t *testing.T) {
+	t.Parallel()
+	cal := game.NewCalendar(600, 10, 12, 0)
+	w := game.NewWorldFromSource(plainsTileSource{}, game.WithCalendar(cal))
+	svc := NewService(w, silentLog())
+
+	outbox, unsub := svc.hub.Subscribe("observer")
+	defer unsub()
+
+	const tickCount = 20
+	for i := 0; i < tickCount; i++ {
+		svc.DoTick()
+	}
+
+	var timeTicks int
+	// Drain the outbox non-blockingly: every DoTick that emits a
+	// TimeTick pushes one ServerMessage; we assert the count rather
+	// than exact ordering.
+	for {
+		select {
+		case msg := <-outbox:
+			if msg.GetEvent().GetTimeTick() != nil {
+				timeTicks++
+			}
+		default:
+			if timeTicks != tickCount/timeTickEveryNTicks {
+				t.Fatalf("TimeTick broadcasts after %d ticks: got %d, want %d",
+					tickCount, timeTicks, tickCount/timeTickEveryNTicks)
+			}
+			return
+		}
+	}
+}
+
+// TestDoTick_TimeTickCarriesCurrentTickAndGameTime verifies the payload
+// on the emitted TimeTick matches the world's authoritative counter
+// and derived GameTime at emission time. On tick 10 with the default
+// cadence (600 ticks/day) CurrentTick = 10 and Derive(10) lives on
+// DayOfMonth 1, Month January, Year 0 — anchoring the test against
+// the calendar math keeps the check meaningful independent of the
+// broadcast cadence.
+func TestDoTick_TimeTickCarriesCurrentTickAndGameTime(t *testing.T) {
+	t.Parallel()
+	cal := game.NewCalendar(600, 10, 12, 0)
+	w := game.NewWorldFromSource(plainsTileSource{}, game.WithCalendar(cal))
+	svc := NewService(w, silentLog())
+
+	outbox, unsub := svc.hub.Subscribe("observer")
+	defer unsub()
+
+	for i := 0; i < timeTickEveryNTicks; i++ {
+		svc.DoTick()
+	}
+
+	var found *pb.TimeTick
+	for {
+		select {
+		case msg := <-outbox:
+			if tt := msg.GetEvent().GetTimeTick(); tt != nil {
+				found = tt
+			}
+		default:
+			goto drained
+		}
+	}
+drained:
+	if found == nil {
+		t.Fatalf("no TimeTick broadcast observed after %d ticks", timeTickEveryNTicks)
+	}
+	if got := found.GetCurrentTick(); got != int64(timeTickEveryNTicks) {
+		t.Errorf("TimeTick.CurrentTick: got %d, want %d", got, timeTickEveryNTicks)
+	}
+	gt := found.GetGameTime()
+	if gt == nil {
+		t.Fatalf("TimeTick.GameTime is nil, want populated")
+	}
+	wantDerived := cal.Derive(int64(timeTickEveryNTicks))
+	if gt.GetYear() != wantDerived.Year {
+		t.Errorf("TimeTick.GameTime.Year: got %d, want %d", gt.GetYear(), wantDerived.Year)
+	}
+	if gt.GetDayOfMonth() != wantDerived.DayOfMonth {
+		t.Errorf("TimeTick.GameTime.DayOfMonth: got %d, want %d",
+			gt.GetDayOfMonth(), wantDerived.DayOfMonth)
+	}
+}
+

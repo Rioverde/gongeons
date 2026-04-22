@@ -88,10 +88,23 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // frame renders without waiting on a pump event. The Subscribe call
 // installs the in-process event feed and the returned unsubscribe is
 // stored so Quit and netError paths can tear it down symmetrically.
+//
+// Calendar cadence is cached from the Service's Calendar accessor for
+// any future UI that needs the raw cadence fields; live calendar
+// position arrives via Snapshot.game_time and the periodic
+// TimeTickEvent broadcast, so no client-side calendar mirror is built.
 func (m *Model) handleSessionAccepted(v sessionAcceptedMsg) (tea.Model, tea.Cmd) {
 	m.myID = v.Result.PlayerID
 	m.worldSeed = v.Result.WorldSeed
 	m.influenceSource = worldgen.NewInfluenceSampler(v.Result.WorldSeed)
+	if cal := v.Result.Calendar; cal.TicksPerDay() > 0 {
+		m.calendarCfg = calendarConfig{
+			TicksPerDay:     cal.TicksPerDay(),
+			DaysPerMonth:    int32(cal.DaysPerMonth()),
+			MonthsPerYear:   int32(cal.MonthsPerYear()),
+			EpochTickOffset: cal.EpochTickOffset(),
+		}
+	}
 	events, unsub := m.sessionSvc.Subscribe(m.ctx, m.myID)
 	m.sessionEvents = events
 	m.sessionUnsub = unsub

@@ -84,9 +84,10 @@ func TestLayoutWide(t *testing.T) {
 		t.Error("wide layout (120x40): Events panel header not found in output")
 	}
 
-	// The half-width events panel wraps long lines, so assert on short
-	// substrings that stay intact across the soft-wrap boundary.
-	wantFragments := []string{"баба moved", "You feel the weight"}
+	// Events now live in the right sidebar column (~22-wide inner) so
+	// long entries wrap at word boundaries. Assert on short substrings
+	// that stay intact on a single wrapped row.
+	wantFragments := []string{"баба moved", "You feel"}
 	for _, want := range wantFragments {
 		if !strings.Contains(out, want) {
 			t.Errorf("wide layout (120x40): output missing %q", want)
@@ -639,6 +640,93 @@ func TestProgressBar(t *testing.T) {
 					tc.current, tc.max, tc.wd, got, tc.want)
 			}
 		})
+	}
+}
+
+// setGameTime assigns the Model's cached calendar position directly —
+// server-authoritative delivery means tests no longer need a local
+// Calendar mirror to Derive from. Used by the date HUD rendering
+// tests.
+func setGameTime(m *Model, year int32, month game.Month, day int32) {
+	m.gameTime = game.GameTime{
+		Year:       year,
+		Month:      month,
+		DayOfMonth: day,
+		Season:     game.SeasonOf(month),
+	}
+}
+
+// TestCalendarDateHUD_Rendering asserts that when the Model carries a
+// server-delivered GameTime of 15 October Year 1042, the wide-layout
+// view renders the expected English date string inside the map box.
+func TestCalendarDateHUD_Rendering(t *testing.T) {
+	t.Parallel()
+	m := playingModel(120, 40)
+	setGameTime(m, 1042, game.MonthOctober, 15)
+
+	out := m.viewPlaying()
+
+	want := "15 October, Year 1042"
+	if !strings.Contains(out, want) {
+		t.Errorf("wide layout: calendar date HUD missing %q in output", want)
+	}
+}
+
+// TestCalendarDateHUD_NoCalendar_Empty asserts that when the Model has
+// no GameTime yet (typical of a legacy server with no calendar wired,
+// or the window before the first Snapshot / TimeTick arrives) the HUD
+// adds no date content to the output — rendering degrades silently.
+func TestCalendarDateHUD_NoCalendar_Empty(t *testing.T) {
+	t.Parallel()
+	m := playingModel(120, 40)
+	// Explicit zero — belt-and-braces against future default changes.
+	m.calendarCfg = calendarConfig{}
+	m.gameTime = game.GameTime{}
+
+	out := m.viewPlaying()
+
+	// The template phrases ", Year " (English) and "года" (Russian)
+	// would only appear if the HUD rendered — asserting their absence
+	// catches both locales with one check.
+	for _, forbidden := range []string{"Year 0", "October", "года"} {
+		if strings.Contains(out, forbidden) {
+			t.Errorf("calendar date HUD leaked into output without Calendar: found %q", forbidden)
+		}
+	}
+}
+
+// TestCalendarDateHUD_RussianLocale asserts that switching Model.lang
+// to "ru" produces the localised genitive-case month name and trailing
+// "года" marker.
+func TestCalendarDateHUD_RussianLocale(t *testing.T) {
+	t.Parallel()
+	m := playingModel(120, 40)
+	m.lang = "ru"
+	setGameTime(m, 1042, game.MonthOctober, 15)
+
+	out := m.viewPlaying()
+
+	want := "15 октября, 1042 года"
+	if !strings.Contains(out, want) {
+		t.Errorf("ru layout: calendar date HUD missing %q in output", want)
+	}
+}
+
+// TestSeasonStyles_CoversEverySeason asserts that every game.Season
+// variant has an entry in seasonStyles so the top-bar renderer never
+// falls through to the unstyled default on a production-path season.
+func TestSeasonStyles_CoversEverySeason(t *testing.T) {
+	t.Parallel()
+	seasons := []game.Season{
+		game.SeasonWinter,
+		game.SeasonSpring,
+		game.SeasonSummer,
+		game.SeasonAutumn,
+	}
+	for _, s := range seasons {
+		if _, ok := seasonStyles[s]; !ok {
+			t.Errorf("seasonStyles missing entry for %s", s.Key())
+		}
 	}
 }
 

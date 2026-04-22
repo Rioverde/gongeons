@@ -28,10 +28,34 @@ func positionFromPB(p *pb.Position) game.Position {
 // via Snapshot.Region, never derived client-side. Keeping the two flows
 // separate means a history mutation of a region reaches the UI
 // without the client needing a new pipeline.
+//
+// The calendar cadence is cached raw in calendarCfg for any future UI
+// that wants the cadence fields; live calendar position arrives via
+// Snapshot.game_time on join and is refreshed by the periodic
+// TimeTickEvent the server broadcasts once per wall-clock second. No
+// client-side calendar mirror is built — the server is authoritative.
 func applyJoinAccepted(m *Model, v acceptedMsg) {
 	m.myID = v.PlayerID
 	m.worldSeed = v.WorldSeed
 	m.influenceSource = worldgen.NewInfluenceSampler(v.WorldSeed)
+	m.calendarCfg = v.Calendar
+}
+
+// calendarConfigFromPB reshapes the wire CalendarConfig into the UI's
+// local cache type. A nil receiver yields the zero value, which the
+// date HUD renderer treats as "not yet configured" and therefore draws
+// nothing. The epoch offset is forwarded so applyJoinAccepted can build
+// a game.Calendar mirror aligned with the server's epoch.
+func calendarConfigFromPB(c *pb.CalendarConfig) calendarConfig {
+	if c == nil {
+		return calendarConfig{}
+	}
+	return calendarConfig{
+		TicksPerDay:     c.GetTicksPerDay(),
+		DaysPerMonth:    c.GetDaysPerMonth(),
+		MonthsPerYear:   c.GetMonthsPerYear(),
+		EpochTickOffset: c.GetEpochTickOffset(),
+	}
 }
 
 // applySnapshot replaces the local world state with a full server snapshot.
@@ -65,6 +89,15 @@ func applySnapshot(m *Model, s *pb.Snapshot) {
 	}
 
 	applyRegion(m, s.GetRegion())
+	// Refresh the live calendar position. A valid GameTime has
+	// Month != MonthZero; a zero-value GameTime arrives when the world
+	// has no Calendar wired (legacy / test servers). Preserve the
+	// previous gameTime rather than blanking the HUD on such snapshots
+	// so the display stays stable if a single snapshot happens to be
+	// calendar-less after TimeTick has already seeded a value.
+	if gt := gameTimeFromPB(s.GetGameTime()); gt.Month != game.MonthZero {
+		m.gameTime = gt
+	}
 	m.detectLandmarkApproach()
 }
 
@@ -168,7 +201,87 @@ func applyEvent(m *Model, ev *pb.Event) {
 		info.Pos = to
 		m.players[id] = info
 		m.logEvent(locale.KeyLogMoved, displayName(info.Name, id))
+	case *pb.Event_TimeTick:
+		// Server-authoritative calendar broadcast: adopt the carried
+		// GameTime directly so the date HUD tracks the world clock
+		// without local extrapolation. Guard against a zero-value
+		// payload (legacy server or calendar-less world) the same way
+		// applySnapshot does so a malformed broadcast never wipes a
+		// previously valid HUD.
+		if gt := gameTimeFromPB(payload.TimeTick.GetGameTime()); gt.Month != game.MonthZero {
+			m.gameTime = gt
+		}
 	}
+}
+
+// gameTimeFromPB reshapes a wire pb.GameTime into its domain form. A
+// nil receiver yields the zero GameTime (Month == MonthZero) so
+// renderers can tell "no calendar configured" apart from any valid
+// in-world date without a separate null check. Mirrors gameTimeToPB on
+// the server side.
+func gameTimeFromPB(p *pb.GameTime) game.GameTime {
+	if p == nil {
+		return game.GameTime{}
+	}
+	return game.GameTime{
+		Year:       p.GetYear(),
+		Month:      monthFromPB(p.GetMonth()),
+		DayOfMonth: p.GetDayOfMonth(),
+		TickOfDay:  p.GetTickOfDay(),
+		Season:     seasonFromPB(p.GetSeason()),
+	}
+}
+
+// monthFromPBMapping is the 1:1 translation table from the wire
+// CalendarMonth enum to the domain Month. Kept as a map so adding a
+// thirteenth month stays a single-line change and CALENDAR_MONTH_
+// UNSPECIFIED falls through to MonthZero via the default return.
+var monthFromPBMapping = map[pb.CalendarMonth]game.Month{
+	pb.CalendarMonth_CALENDAR_MONTH_JANUARY:   game.MonthJanuary,
+	pb.CalendarMonth_CALENDAR_MONTH_FEBRUARY:  game.MonthFebruary,
+	pb.CalendarMonth_CALENDAR_MONTH_MARCH:     game.MonthMarch,
+	pb.CalendarMonth_CALENDAR_MONTH_APRIL:     game.MonthApril,
+	pb.CalendarMonth_CALENDAR_MONTH_MAY:       game.MonthMay,
+	pb.CalendarMonth_CALENDAR_MONTH_JUNE:      game.MonthJune,
+	pb.CalendarMonth_CALENDAR_MONTH_JULY:      game.MonthJuly,
+	pb.CalendarMonth_CALENDAR_MONTH_AUGUST:    game.MonthAugust,
+	pb.CalendarMonth_CALENDAR_MONTH_SEPTEMBER: game.MonthSeptember,
+	pb.CalendarMonth_CALENDAR_MONTH_OCTOBER:   game.MonthOctober,
+	pb.CalendarMonth_CALENDAR_MONTH_NOVEMBER:  game.MonthNovember,
+	pb.CalendarMonth_CALENDAR_MONTH_DECEMBER:  game.MonthDecember,
+}
+
+// monthFromPB translates a wire CalendarMonth enum to the domain
+// Month. Unknown wire values (including CALENDAR_MONTH_UNSPECIFIED)
+// return MonthZero so the renderer treats them as "no calendar".
+func monthFromPB(m pb.CalendarMonth) game.Month {
+	if v, ok := monthFromPBMapping[m]; ok {
+		return v
+	}
+	return game.MonthZero
+}
+
+// seasonFromPBMapping is the 1:1 translation table from the wire
+// CalendarSeason enum to the domain Season. Kept as a map for
+// symmetry with monthFromPBMapping; the zero-value UNSPECIFIED falls
+// through to SeasonWinter via the default return (matches SeasonOf
+// behaviour for out-of-range months).
+var seasonFromPBMapping = map[pb.CalendarSeason]game.Season{
+	pb.CalendarSeason_CALENDAR_SEASON_WINTER: game.SeasonWinter,
+	pb.CalendarSeason_CALENDAR_SEASON_SPRING: game.SeasonSpring,
+	pb.CalendarSeason_CALENDAR_SEASON_SUMMER: game.SeasonSummer,
+	pb.CalendarSeason_CALENDAR_SEASON_AUTUMN: game.SeasonAutumn,
+}
+
+// seasonFromPB translates a wire CalendarSeason enum to the domain
+// Season. Unknown wire values (including CALENDAR_SEASON_UNSPECIFIED)
+// return SeasonWinter as the safe default — matches the server-side
+// SeasonOf behaviour for an out-of-range Month.
+func seasonFromPB(s pb.CalendarSeason) game.Season {
+	if v, ok := seasonFromPBMapping[s]; ok {
+		return v
+	}
+	return game.SeasonWinter
 }
 
 // logEvent appends a default-styled bulleted, localized event-log entry.

@@ -839,3 +839,60 @@ other = "Moss"
 other = "Fern"
 [settlement.prefix.wild.4]
 other = "Green"
+
+# Calendar — top bar date template and month / season labels. The date
+# template has placeholders {{.Day}}, {{.Month}}, {{.Year}} so word order
+# stays localisable. Month labels use the English nominative case
+# ("October"); Russian uses the genitive case ("октября") because the
+# template is a date phrase.
+
+[calendar.date_template]
+other = "{{.Day}} {{.Month}}, Year {{.Year}}"
+
+[calendar.month.january]
+other = "January"
+
+[calendar.month.february]
+other = "February"
+
+[calendar.month.march]
+other = "March"
+
+[calendar.month.april]
+other = "April"
+
+[calendar.month.may]
+other = "May"
+
+[calendar.month.june]
+other = "June"
+
+[calendar.month.july]
+other = "July"
+
+[calendar.month.august]
+other = "August"
+
+[calendar.month.september]
+other = "September"
+
+[calendar.month.october]
+other = "October"
+
+[calendar.month.november]
+other = "November"
+
+[calendar.month.december]
+other = "December"
+
+[calendar.season.winter]
+other = "Winter"
+
+[calendar.season.spring]
+other = "Spring"
+
+[calendar.season.summer]
+other = "Summer"
+
+[calendar.season.autumn]
+other = "Autumn"

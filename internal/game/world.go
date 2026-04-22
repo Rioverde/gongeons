@@ -54,6 +54,16 @@ type World struct {
 	// methods return the empty result when unset so callers need not
 	// special-case the missing source.
 	depositSource DepositSource
+	// currentTick is the monotonic tick counter — advances by exactly 1
+	// per Tick() call. Zero on a freshly constructed world. Calendar-
+	// derived GameTime reads from this counter through w.calendar.
+	currentTick int64
+	// calendar is the tick-to-GameTime derivation config. The zero value
+	// (ticksPerDay = 0) is a sentinel for "no calendar wired" — in that
+	// mode Tick() still increments currentTick but emits no calendar
+	// boundary events and GameTime() returns the zero-value GameTime.
+	// Production paths go through WithCalendar(NewCalendar(...)).
+	calendar Calendar
 }
 
 // WorldOption configures optional fields on a World during construction.
@@ -122,6 +132,16 @@ func WithDepositSource(source DepositSource) WorldOption {
 			w.depositSource = source
 		}
 	}
+}
+
+// WithCalendar attaches a Calendar. A zero-value Calendar is treated
+// the same as "no calendar wired" — Tick() still advances the internal
+// counter but emits no boundary events and GameTime() returns the zero
+// value. Production code always supplies a valid Calendar via
+// NewCalendar; tests can skip the option to exercise the no-calendar
+// path.
+func WithCalendar(cal Calendar) WorldOption {
+	return func(w *World) { w.calendar = cal }
 }
 
 // NewWorld constructs an infinite World around the given TileSource. Use
@@ -197,6 +217,44 @@ func (w *World) VolcanoSource() VolcanoSource {
 // decide whether to wire caching or skip deposit-aware code paths.
 func (w *World) DepositSource() DepositSource {
 	return w.depositSource
+}
+
+// CurrentTick returns the monotonic tick counter. Zero on a freshly
+// constructed world; incremented by exactly 1 per Tick() call. Exposed
+// so the server can seed wire messages, diagnostics, and persistence
+// snapshots with the authoritative counter.
+//
+// Threading: World is not internally synchronised — callers that also
+// mutate world state (the server via s.mu) must hold their mutex while
+// calling CurrentTick so Tick() cannot interleave a half-written
+// counter update. Read-only callers in test contexts hold no mutex but
+// also never race with Tick().
+func (w *World) CurrentTick() int64 {
+	return w.currentTick
+}
+
+// Calendar returns the configured Calendar. A zero value indicates no
+// calendar is wired — callers should check `cal.TicksPerDay() > 0`
+// before calling Derive on the result. The server uses this to
+// propagate CalendarConfig to clients via JoinAccepted.
+func (w *World) Calendar() Calendar {
+	return w.calendar
+}
+
+// GameTime returns the derived calendar position at the current tick.
+// Returns the zero-value GameTime when no calendar is wired so callers
+// can treat "missing calendar" as "Year 0 Month 0" without a separate
+// nil check. Cheap (<20 ns); call freely on the hot path.
+//
+// Threading: reads w.currentTick and w.calendar. The calendar is
+// immutable after construction; currentTick is mutated only by Tick().
+// Callers that share the world with a concurrent Tick() caller must
+// hold the same mutex (the server path always holds s.mu).
+func (w *World) GameTime() GameTime {
+	if w.calendar.ticksPerDay == 0 {
+		return GameTime{}
+	}
+	return w.calendar.Derive(w.currentTick)
 }
 
 // RegionAt returns the region covering the given world position. It

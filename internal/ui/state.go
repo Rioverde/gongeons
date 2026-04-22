@@ -77,6 +77,21 @@ type playerInfo struct {
 	Pos  game.Position
 }
 
+// calendarConfig is the client-side cache of the immutable calendar
+// cadence the server advertised in JoinAccepted. Stored as a UI-local
+// value type so state.go does not drag a hard dependency on the full
+// game.Calendar struct at this layer. Zero value indicates "not yet
+// received" — the date HUD falls back to empty output until the fields
+// populate. EpochTickOffset carries the server's seed-derived calendar
+// epoch so the client can build a mirror game.Calendar and derive
+// GameTime locally between snapshots.
+type calendarConfig struct {
+	TicksPerDay     int64
+	DaysPerMonth    int32
+	MonthsPerYear   int32
+	EpochTickOffset int64
+}
+
 // logKind classifies an event-log entry so renderEventsBox can apply
 // per-kind colour styles. The zero value is logKindDefault.
 type logKind int
@@ -148,6 +163,21 @@ type Model struct {
 	// coreStats.MaxHP() on join and will be updated by combat events later.
 	coreStats game.CoreStats
 	currentHP int
+
+	// calendarCfg is the raw immutable cadence delivered once in
+	// JoinAccepted. Kept so any future UI that needs the cadence fields
+	// (progress rings, day/night visuals) can read them without another
+	// round-trip. Calendar math is no longer done client-side — the
+	// server drives the clock via TimeTickEvent.
+	calendarCfg calendarConfig
+
+	// gameTime is the latest server-authoritative calendar position.
+	// Refreshed by Snapshot.game_time on join/viewport changes and by
+	// the periodic TimeTickEvent broadcast the server emits once per
+	// wall-clock second. The zero value (Month == MonthZero) means
+	// "no calendar wired / not yet received" and the date HUD
+	// suppresses rendering in that case.
+	gameTime game.GameTime
 
 	// help renders the bottom-bar keybinding hint from Keys. Width is
 	// updated on every tea.WindowSizeMsg so the short view truncates
@@ -327,3 +357,4 @@ func (m *Model) pointBuyUsed() int {
 func (m *Model) pointBuyRemaining() int {
 	return game.PointBuyBudget - m.pointBuyUsed()
 }
+

@@ -127,7 +127,7 @@ func (s *Service) Play(stream pb.GameService_PlayServer) error {
 
 	defer s.cleanup(playerID, name, cancelWrite, &wg, unsub)
 
-	s.hub.SendTo(playerID, acceptedResponse(playerID, spawn, s.world.Seed()))
+	s.hub.SendTo(playerID, acceptedResponse(playerID, spawn, s.world.Seed(), s.world.Calendar()))
 	s.hub.SendTo(playerID, snapshotResponse(snap))
 	s.broadcastEvents(joinEvents)
 
@@ -414,6 +414,17 @@ func (s *Service) updateViewport(playerID string, width, height int) {
 func (s *Service) DoTick() {
 	s.mu.Lock()
 	events := s.world.Tick()
+	// Once per wall-clock second (10 ticks @ 10 Hz), prepend a
+	// TimeTickEvent so every subscriber's date HUD refreshes without
+	// waiting on a Snapshot. Prepend so consumers see calendar state
+	// BEFORE any movement events that might piggyback on the same tick.
+	if s.world.CurrentTick()%timeTickEveryNTicks == 0 {
+		events = append([]game.Event{game.TimeTickEvent{
+			CurrentTick: s.world.CurrentTick(),
+			GameTime:    s.world.GameTime(),
+			AtTick:      s.world.CurrentTick(),
+		}}, events...)
+	}
 	snaps := s.followSnapshotsLocked(events)
 	s.mu.Unlock()
 
@@ -424,6 +435,14 @@ func (s *Service) DoTick() {
 	s.publishEventsToSessions(events)
 	s.publishSnapshotsToSessions(snaps)
 }
+
+// timeTickEveryNTicks controls how often DoTick fans out a TimeTickEvent
+// to every subscriber. Ten matches the server's 10 Hz loop cadence, so
+// the event fires once per wall-clock second — frequent enough to keep
+// the calendar HUD responsive, sparse enough that the extra broadcast
+// is free at typical subscriber counts. Hard-coded here because the
+// broadcast cadence is independent of any gameplay tuning.
+const timeTickEveryNTicks = 10
 
 // followSnapshotsLocked inspects the events emitted by World.Tick and
 // builds a per-player follow-up snapshot for anyone whose position has

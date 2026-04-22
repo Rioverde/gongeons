@@ -830,3 +830,59 @@ other = "Моховой"
 other = "Папоротник"
 [settlement.prefix.wild.4]
 other = "Зелёный"
+
+# Календарь — шаблон верхней строки и названия месяцев и сезонов. Шаблон
+# даёт placeholder'ы {{.Day}}, {{.Month}}, {{.Year}} чтобы порядок слов
+# зависел от локали. Русские месяцы в родительном падеже ("октября"), потому
+# что шаблон — «15 октября, 1042 года».
+
+[calendar.date_template]
+other = "{{.Day}} {{.Month}}, {{.Year}} года"
+
+[calendar.month.january]
+other = "января"
+
+[calendar.month.february]
+other = "февраля"
+
+[calendar.month.march]
+other = "марта"
+
+[calendar.month.april]
+other = "апреля"
+
+[calendar.month.may]
+other = "мая"
+
+[calendar.month.june]
+other = "июня"
+
+[calendar.month.july]
+other = "июля"
+
+[calendar.month.august]
+other = "августа"
+
+[calendar.month.september]
+other = "сентября"
+
+[calendar.month.october]
+other = "октября"
+
+[calendar.month.november]
+other = "ноября"
+
+[calendar.month.december]
+other = "декабря"
+
+[calendar.season.winter]
+other = "Зима"
+
+[calendar.season.spring]
+other = "Весна"
+
+[calendar.season.summer]
+other = "Лето"
+
+[calendar.season.autumn]
+other = "Осень"
