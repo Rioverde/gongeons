@@ -195,8 +195,78 @@ func domainEventToPB(e game.Event) *pb.Event {
 			EntityId: v.EntityID,
 			Reason:   v.Reason,
 		}}}
+	case game.TimeTickEvent:
+		return &pb.Event{Payload: &pb.Event_TimeTick{TimeTick: &pb.TimeTick{
+			CurrentTick: v.CurrentTick,
+			GameTime:    domainGameTimeToPB(v.GameTime),
+		}}}
 	}
 	return nil
+}
+
+// domainGameTimeToPB mirrors server.gameTimeToPB in the UI package so
+// the in-process SSH event pipeline can reuse applyEvent's wire-shaped
+// dispatch without importing the server-internal helper (which returns
+// a full *pb.ServerMessage). Keeps domainEventToPB a self-contained
+// domain→wire translation.
+func domainGameTimeToPB(gt game.GameTime) *pb.GameTime {
+	return &pb.GameTime{
+		Year:       gt.Year,
+		Month:      domainMonthToPB(gt.Month),
+		DayOfMonth: gt.DayOfMonth,
+		TickOfDay:  gt.TickOfDay,
+		Season:     domainSeasonToPB(gt.Season),
+	}
+}
+
+// domainMonthToPBMapping is the 1:1 translation table from the domain
+// Month enum to its wire counterpart. Kept parallel to the server-side
+// monthPBMapping so any twelve-month assumption lives in exactly one
+// place per package.
+var domainMonthToPBMapping = map[game.Month]pb.CalendarMonth{
+	game.MonthJanuary:   pb.CalendarMonth_CALENDAR_MONTH_JANUARY,
+	game.MonthFebruary:  pb.CalendarMonth_CALENDAR_MONTH_FEBRUARY,
+	game.MonthMarch:     pb.CalendarMonth_CALENDAR_MONTH_MARCH,
+	game.MonthApril:     pb.CalendarMonth_CALENDAR_MONTH_APRIL,
+	game.MonthMay:       pb.CalendarMonth_CALENDAR_MONTH_MAY,
+	game.MonthJune:      pb.CalendarMonth_CALENDAR_MONTH_JUNE,
+	game.MonthJuly:      pb.CalendarMonth_CALENDAR_MONTH_JULY,
+	game.MonthAugust:    pb.CalendarMonth_CALENDAR_MONTH_AUGUST,
+	game.MonthSeptember: pb.CalendarMonth_CALENDAR_MONTH_SEPTEMBER,
+	game.MonthOctober:   pb.CalendarMonth_CALENDAR_MONTH_OCTOBER,
+	game.MonthNovember:  pb.CalendarMonth_CALENDAR_MONTH_NOVEMBER,
+	game.MonthDecember:  pb.CalendarMonth_CALENDAR_MONTH_DECEMBER,
+}
+
+// domainMonthToPB translates the domain Month enum to the wire
+// CalendarMonth. MonthZero and any out-of-range value fall back to
+// CALENDAR_MONTH_UNSPECIFIED so a zero-value GameTime round-trips
+// cleanly through the client's gameTimeFromPB guard.
+func domainMonthToPB(m game.Month) pb.CalendarMonth {
+	if v, ok := domainMonthToPBMapping[m]; ok {
+		return v
+	}
+	return pb.CalendarMonth_CALENDAR_MONTH_UNSPECIFIED
+}
+
+// domainSeasonToPBMapping is the 1:1 translation table from the domain
+// Season enum to its wire counterpart. Kept parallel to the server-side
+// seasonPBMapping so both packages agree on the axis.
+var domainSeasonToPBMapping = map[game.Season]pb.CalendarSeason{
+	game.SeasonWinter: pb.CalendarSeason_CALENDAR_SEASON_WINTER,
+	game.SeasonSpring: pb.CalendarSeason_CALENDAR_SEASON_SPRING,
+	game.SeasonSummer: pb.CalendarSeason_CALENDAR_SEASON_SUMMER,
+	game.SeasonAutumn: pb.CalendarSeason_CALENDAR_SEASON_AUTUMN,
+}
+
+// domainSeasonToPB translates the domain Season enum to the wire
+// CalendarSeason. Out-of-range values fall back to
+// CALENDAR_SEASON_UNSPECIFIED.
+func domainSeasonToPB(s game.Season) pb.CalendarSeason {
+	if v, ok := domainSeasonToPBMapping[s]; ok {
+		return v
+	}
+	return pb.CalendarSeason_CALENDAR_SEASON_UNSPECIFIED
 }
 
 // domainPositionToPB is the inverse of positionFromPB — Position → pb.Position.

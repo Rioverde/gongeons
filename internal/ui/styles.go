@@ -3,6 +3,7 @@ package ui
 import (
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/Rioverde/gongeons/internal/game"
 	pb "github.com/Rioverde/gongeons/internal/proto"
 )
 
@@ -18,6 +19,11 @@ var styles = struct {
 	title   lipgloss.Style
 	box     lipgloss.Style
 	status  lipgloss.Style
+	// rule styles the horizontal divider lines inside the map box
+	// (above the grid, above the status strip). Neutral soft-white so
+	// the rules read as secondary chrome without pulling attention
+	// like the yellow status tint.
+	rule    lipgloss.Style
 	prompt  lipgloss.Style
 	input   lipgloss.Style
 	cursor  lipgloss.Style
@@ -48,6 +54,7 @@ var styles = struct {
 	title:  lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12")).Padding(0, 1),
 	box:    lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("8")).Padding(1, 2),
 	status: lipgloss.NewStyle().Foreground(lipgloss.Color("11")),
+	rule:   lipgloss.NewStyle().Foreground(lipgloss.Color("250")), // #bcbcbc soft white
 	prompt: lipgloss.NewStyle().Foreground(lipgloss.Color("6")),
 	input:  lipgloss.NewStyle().Foreground(lipgloss.Color("15")),
 	cursor: lipgloss.NewStyle().Reverse(true),
@@ -64,6 +71,22 @@ var styles = struct {
 
 	hpBar: lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5f5f")),
 	mpBar: lipgloss.NewStyle().Foreground(lipgloss.Color("#5fafff")),
+}
+
+// seasonStyles tints the top-bar calendar date block with a foreground
+// colour that reads as the current season at a glance. Hex comments
+// document the 256-colour xterm codes so a reader does not have to
+// reverse-lookup the palette.
+//
+//	Winter (153) pale blue   — cold air mnemonic
+//	Spring (120) pale green  — new growth mnemonic
+//	Summer (220) warm yellow — sun mnemonic
+//	Autumn (166) burnt orange — falling leaves mnemonic
+var seasonStyles = map[game.Season]lipgloss.Style{
+	game.SeasonWinter: lipgloss.NewStyle().Foreground(lipgloss.Color("153")),
+	game.SeasonSpring: lipgloss.NewStyle().Foreground(lipgloss.Color("120")),
+	game.SeasonSummer: lipgloss.NewStyle().Foreground(lipgloss.Color("220")),
+	game.SeasonAutumn: lipgloss.NewStyle().Foreground(lipgloss.Color("166")),
 }
 
 // landmarkStyles pairs each LandmarkKind with its foreground style. Landmarks

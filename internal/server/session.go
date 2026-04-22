@@ -15,11 +15,19 @@ import (
 // world seed (for local influence sampling), and the initial viewport
 // snapshot. Returned by JoinSession so the caller can present the
 // first frame synchronously before wiring the channel-based event feed.
+//
+// Calendar carries the server's authoritative calendar cadence so the
+// SSH-mode client can construct a local game.Calendar mirror without a
+// round-trip. Zero-valued Calendar (ticksPerDay == 0) indicates the
+// service has no Calendar wired and the client should skip the date
+// HUD. This is the session-mode analogue of JoinAccepted.calendar on
+// the gRPC path.
 type SessionJoinResult struct {
 	PlayerID  string
 	Spawn     game.Position
 	WorldSeed int64
 	Snapshot  *pb.Snapshot
+	Calendar  game.Calendar
 	// Events carries the events produced by the Join itself (one
 	// PlayerJoined). Returned so the caller can broadcast them to other
 	// subscribers without having to peek at the internal state.
@@ -61,6 +69,7 @@ func (s *Service) JoinSession(
 		Spawn:     spawn,
 		WorldSeed: s.world.Seed(),
 		Snapshot:  snap,
+		Calendar:  s.world.Calendar(),
 		Events:    events,
 	}, nil
 }

@@ -55,10 +55,56 @@ type IntentFailedEvent struct {
 	Reason   string `json:"reason"`
 }
 
-func (PlayerJoinedEvent) isEvent() {}
-func (PlayerLeftEvent) isEvent()   {}
-func (EntityMovedEvent) isEvent()  {}
-func (IntentFailedEvent) isEvent() {}
+// MonthChangedEvent fires on the tick where the calendar-derived Month
+// differs from the previous tick's Month. The finest-grained calendar
+// event; subscribers that want monthly cycling (per-month weather
+// rolls, NPC memory decay) wire here.
+type MonthChangedEvent struct {
+	Month  Month `json:"month"`
+	Year   int32 `json:"year"`
+	AtTick int64 `json:"at_tick"`
+}
+
+// SeasonChangedEvent fires on the tick where the derived Season differs
+// from the previous tick's Season — the four month boundaries per year
+// where the season bucket crosses (Feb→Mar, May→Jun, Aug→Sep, Nov→Dec).
+// Always accompanied by a MonthChangedEvent on the same tick.
+type SeasonChangedEvent struct {
+	Season Season `json:"season"`
+	Year   int32  `json:"year"`
+	AtTick int64  `json:"at_tick"`
+}
+
+// YearStartedEvent fires on the tick where the derived Year advances
+// past the previous tick's Year — i.e. the first tick of January.
+// Accompanied by MonthChangedEvent and SeasonChangedEvent on the same
+// tick; emit order is Month → Season → Year (finest granularity first)
+// so a consumer that listens only to YearStartedEvent still sees the
+// annual rollover.
+type YearStartedEvent struct {
+	Year   int32 `json:"year"`
+	AtTick int64 `json:"at_tick"`
+}
+
+// TimeTickEvent broadcasts the server's authoritative calendar state so
+// every client can keep its date HUD in sync without waiting for a full
+// snapshot. Fired once every N server ticks (currently every 10 — once
+// per wall-clock second at 10 Hz). Carries both the raw tick counter
+// and the derived GameTime so the client has zero calendar math to do.
+type TimeTickEvent struct {
+	CurrentTick int64    `json:"current_tick"`
+	GameTime    GameTime `json:"game_time"`
+	AtTick      int64    `json:"at_tick"`
+}
+
+func (PlayerJoinedEvent) isEvent()  {}
+func (PlayerLeftEvent) isEvent()    {}
+func (EntityMovedEvent) isEvent()   {}
+func (IntentFailedEvent) isEvent()  {}
+func (MonthChangedEvent) isEvent()  {}
+func (SeasonChangedEvent) isEvent() {}
+func (YearStartedEvent) isEvent()   {}
+func (TimeTickEvent) isEvent()      {}
 
 // Compile-time proofs that every concrete event satisfies Event.
 var (
@@ -66,4 +112,8 @@ var (
 	_ Event = PlayerLeftEvent{}
 	_ Event = EntityMovedEvent{}
 	_ Event = IntentFailedEvent{}
+	_ Event = MonthChangedEvent{}
+	_ Event = SeasonChangedEvent{}
+	_ Event = YearStartedEvent{}
+	_ Event = TimeTickEvent{}
 )
