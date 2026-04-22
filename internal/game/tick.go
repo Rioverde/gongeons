@@ -112,6 +112,19 @@ func (w *World) mcalcMove(speed int) int {
 // reported via IntentFailedEvent carrying a stable locale-catalog reason
 // key; the client renders the player-facing text.
 func (w *World) Tick() []Event {
+	// Capture the calendar state BEFORE this tick advances the counter,
+	// so boundary-change detection compares the new tick against the
+	// previous one. When no calendar is wired (ticksPerDay == 0), both
+	// samples return the zero-value GameTime and the comparison emits
+	// no calendar events — preserving the pre-calendar tick semantics
+	// for tests that construct a World without WithCalendar.
+	hasCalendar := w.calendar.ticksPerDay != 0
+	var prevTime GameTime
+	if hasCalendar {
+		prevTime = w.calendar.Derive(w.currentTick)
+	}
+	w.currentTick++
+
 	entities := w.orderedEntities()
 	events := make([]Event, 0, len(entities))
 	for _, e := range entities {
@@ -145,6 +158,35 @@ func (w *World) Tick() []Event {
 		events = append(events, evs...)
 		e.setTickEnergy(e.tickEnergy() - cost)
 		e.setTickIntent(nil)
+	}
+
+	// Calendar boundary events — emitted AFTER entity resolution so
+	// subscribers see "the tick where month flipped" alongside any
+	// movement/intent events from the same tick. Emit order is Month →
+	// Season → Year (finest granularity first) so a consumer listening
+	// only to YearStartedEvent still sees the annual rollover.
+	if hasCalendar {
+		curTime := w.calendar.Derive(w.currentTick)
+		if curTime.Month != prevTime.Month {
+			events = append(events, MonthChangedEvent{
+				Month:  curTime.Month,
+				Year:   curTime.Year,
+				AtTick: w.currentTick,
+			})
+		}
+		if curTime.Season != prevTime.Season {
+			events = append(events, SeasonChangedEvent{
+				Season: curTime.Season,
+				Year:   curTime.Year,
+				AtTick: w.currentTick,
+			})
+		}
+		if curTime.Year != prevTime.Year {
+			events = append(events, YearStartedEvent{
+				Year:   curTime.Year,
+				AtTick: w.currentTick,
+			})
+		}
 	}
 	return events
 }

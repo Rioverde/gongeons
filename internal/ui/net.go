@@ -33,14 +33,18 @@ type connectedMsg struct {
 	outbox chan *pb.ClientMessage
 }
 
-// acceptedMsg is the JoinAccepted reply — carries the server-assigned ID and
-// the authoritative world seed. The seed is stored read-only on the Model so
-// the client can construct a local NoiseRegionSource for cosmetic per-tile
-// tint sampling; gameplay identity (region name, character) always travels
-// on the wire inside Snapshot.Region.
+// acceptedMsg is the JoinAccepted reply — carries the server-assigned ID,
+// the authoritative world seed, and the immutable calendar cadence. The
+// seed is stored read-only on the Model so the client can construct a
+// local NoiseRegionSource for cosmetic per-tile tint sampling; gameplay
+// identity (region name, character) always travels on the wire inside
+// Snapshot.Region. The calendar is stashed so rendering code can read
+// the cadence (e.g. to derive time-of-day later) without another server
+// round-trip.
 type acceptedMsg struct {
 	PlayerID  string
 	WorldSeed int64
+	Calendar  calendarConfig
 }
 
 // snapshotMsg is the full world snapshot, sent once on join.
@@ -153,6 +157,7 @@ func listenCmd(stream pb.GameService_PlayClient) tea.Cmd {
 			return acceptedMsg{
 				PlayerID:  payload.Accepted.GetPlayerId(),
 				WorldSeed: payload.Accepted.GetWorldSeed(),
+				Calendar:  calendarConfigFromPB(payload.Accepted.GetCalendar()),
 			}
 		case *pb.ServerMessage_Snapshot:
 			return snapshotMsg{Snapshot: payload.Snapshot}

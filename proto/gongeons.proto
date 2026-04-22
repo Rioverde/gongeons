@@ -105,6 +105,73 @@ enum NameFormat {
   NAME_FORMAT_KIND_PATTERN     = 3;
 }
 
+// CalendarMonth enumerates the twelve calendar months. Numbered to
+// match the domain game.Month (1 = January … 12 = December) so the
+// translation in internal/server/mapper.go is a straight table lookup.
+// CALENDAR_MONTH_UNSPECIFIED = 0 keeps the proto3 zero-value sentinel
+// distinct from a real month so a missing GameTime decodes cleanly.
+enum CalendarMonth {
+  CALENDAR_MONTH_UNSPECIFIED = 0;
+  CALENDAR_MONTH_JANUARY     = 1;
+  CALENDAR_MONTH_FEBRUARY    = 2;
+  CALENDAR_MONTH_MARCH       = 3;
+  CALENDAR_MONTH_APRIL       = 4;
+  CALENDAR_MONTH_MAY         = 5;
+  CALENDAR_MONTH_JUNE        = 6;
+  CALENDAR_MONTH_JULY        = 7;
+  CALENDAR_MONTH_AUGUST      = 8;
+  CALENDAR_MONTH_SEPTEMBER   = 9;
+  CALENDAR_MONTH_OCTOBER     = 10;
+  CALENDAR_MONTH_NOVEMBER    = 11;
+  CALENDAR_MONTH_DECEMBER    = 12;
+}
+
+// CalendarSeason enumerates the four calendar seasons. Numbered 1..4
+// so CALENDAR_SEASON_UNSPECIFIED = 0 remains the proto3 zero-value
+// sentinel; the domain game.Season iota starts at Winter = 0, so the
+// mapper translates through an explicit table rather than casting.
+enum CalendarSeason {
+  CALENDAR_SEASON_UNSPECIFIED = 0;
+  CALENDAR_SEASON_WINTER      = 1;
+  CALENDAR_SEASON_SPRING      = 2;
+  CALENDAR_SEASON_SUMMER      = 3;
+  CALENDAR_SEASON_AUTUMN      = 4;
+}
+
+// GameTime is the decoded calendar position at a specific tick. All
+// fields are derived server-side from the world's currentTick via the
+// configured Calendar. Year may be negative (prehistory queries).
+// Month and DayOfMonth are 1-indexed for display parity with real-world
+// calendar conventions ("1 October, Year 1042"). TickOfDay is 0-indexed
+// in [0, ticksPerDay) for future sub-day rendering (day/night). Season
+// is derived from Month and sent on the wire so the client never has to
+// mirror the domain's SeasonOf mapping.
+message GameTime {
+  int32          year         = 1;
+  CalendarMonth  month        = 2;
+  int32          day_of_month = 3;
+  int32          tick_of_day  = 4;
+  CalendarSeason season       = 5;
+}
+
+// CalendarConfig carries the immutable cadence of the server's
+// Calendar. Sent once in JoinAccepted so the client can compute
+// year/month lengths locally (e.g. a progress ring for "time until
+// next month") without a second round trip. Cadence is authoritative
+// from server — the client never invents its own.
+//
+// epoch_tick_offset is the server's calendar epoch — a per-world
+// seed-derived jitter so two worlds with different seeds do not both
+// start on "1 January, Year 0". Surfaced so the client can construct
+// its own game.Calendar mirror and derive GameTime locally between
+// snapshots via the Snapshot.current_tick anchor.
+message CalendarConfig {
+  int64 ticks_per_day     = 1;
+  int32 days_per_month    = 2;
+  int32 months_per_year   = 3;
+  int64 epoch_tick_offset = 4;
+}
+
 // NameParts is the language-agnostic structured name carried on every
 // named entity (Region, Landmark, future Settlement). The client
 // composes the final display string locally: it looks up the template
@@ -285,9 +352,14 @@ message ServerMessage {
 // client can construct a local region source for per-tile influence
 // sampling (cosmetic only, not authoritative state).
 message JoinAccepted {
-  string   player_id  = 1;
-  Position spawn      = 2;
-  int64    world_seed = 3;
+  string         player_id  = 1;
+  Position       spawn      = 2;
+  int64          world_seed = 3;
+  // calendar is the server's immutable Calendar cadence. Sent once at
+  // join time so the client can compute in-game time locally (e.g.
+  // "ticks until next month") without a second round trip. Cadence is
+  // authoritative from server — the client never invents its own.
+  CalendarConfig calendar   = 4;
 }
 
 // Snapshot is a viewport of the world. Width/height are tile counts; origin
@@ -312,6 +384,19 @@ message Snapshot {
   // the denominator of the energy bar (e.g. "8/12") without hard-coding
   // the server constant.
   int32           self_energy_cost = 8;
+  // game_time is the calendar position at the moment this snapshot was
+  // built. Derived server-side from World.currentTick via the configured
+  // Calendar; nil when the world has no Calendar wired (e.g. a test
+  // harness that skips WithCalendar). See CalendarConfig in
+  // JoinAccepted for the cadence the derivation ran against.
+  GameTime        game_time        = 9;
+  // current_tick is the monotonic server tick counter sampled at
+  // snapshot-build time. Pair it with the join-time CalendarConfig to
+  // extrapolate GameTime locally between snapshots using wall-clock
+  // elapsed since the last snapshot — so the calendar HUD keeps
+  // advancing smoothly even when the player sits still and the server
+  // is only sending snapshots on movement.
+  int64           current_tick     = 10;
 }
 
 // Event is a domain event the server broadcasts to every connected client.
@@ -322,7 +407,19 @@ message Event {
     PlayerLeft   player_left   = 2;
     EntityMoved  entity_moved  = 3;
     IntentFailed intent_failed = 4;
+    TimeTick     time_tick     = 5;
   }
+}
+
+// TimeTick is a server-authoritative calendar broadcast. The server
+// emits one every N ticks (currently every 10 — once per wall-clock
+// second at the 10 Hz server cadence) so every connected client keeps
+// the date HUD in sync without round-tripping a full Snapshot. Carries
+// the current server tick counter plus the fully-derived GameTime so
+// the client never has to do any time math locally.
+message TimeTick {
+  int64    current_tick = 1;
+  GameTime game_time    = 2;
 }
 
 message PlayerJoined {

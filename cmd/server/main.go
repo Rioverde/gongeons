@@ -153,6 +153,12 @@ func buildWorld(seed int64) *game.World {
 	landmarkSrc := worldgen.NewNoiseLandmarkSource(seed, regionSrc, wg.Generator())
 	volcanoSrc := worldgen.NewNoiseVolcanoSource(seed, wg.Generator(), landmarkSrc)
 	depositSrc := worldgen.NewNoiseDepositSource(seed, wg.Generator(), landmarkSrc, volcanoSrc)
+	cal := game.NewCalendar(
+		game.DefaultCalendarConfig.TicksPerDay,
+		game.DefaultCalendarConfig.DaysPerMonth,
+		game.DefaultCalendarConfig.MonthsPerYear,
+		game.DefaultEpochOffset(seed),
+	)
 	return game.NewWorld(
 		wg,
 		game.WithSeed(seed),
@@ -160,6 +166,7 @@ func buildWorld(seed int64) *game.World {
 		game.WithLandmarkSource(landmarkSrc),
 		game.WithVolcanoSource(volcanoSrc),
 		game.WithDepositSource(depositSrc),
+		game.WithCalendar(cal),
 	)
 }
 

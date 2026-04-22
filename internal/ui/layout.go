@@ -21,6 +21,18 @@ const (
 	// directly above the bottom border — no spacer, no divider.
 	mapStatusRows = 2
 
+	// mapHeaderRows is the row budget for the in-map date HUD header:
+	// one row for the date line plus one horizontal rule between it
+	// and the tile grid. Mirrors the pre-status horizontal rule so the
+	// layout reads symmetrically above and below the grid.
+	mapHeaderRows = 2
+
+	// mapStatusDividerRows is the row budget for the horizontal rule
+	// drawn between the tile grid and the status strip inside the map
+	// box. One row. Split out from mapStatusRows so it can be accounted
+	// for separately in the viewport-size calculation.
+	mapStatusDividerRows = 1
+
 	// gridBoxChromeV is the vertical chrome around the grid+status box.
 	// renderMapBox uses Padding(0, 2) — zero vertical padding — so chrome
 	// collapses to just the top and bottom borders.
@@ -77,9 +89,19 @@ func viewportForTerm(termW, termH int) (int, int) {
 	availCells := termW - horizReserved - gridBoxChrome
 	// Each tile occupies tileWidth cells, so divide to get tile count.
 	w := availCells / tileWidth
-	// Vertical: full height minus events panel, map box chrome, and the
-	// in-map status strip row.
-	h := termH - gridBoxChromeV - eventsRows - mapStatusRows
+	// Vertical: full height minus map box chrome, the in-map date HUD
+	// header (plus its divider), the in-map status strip and its
+	// divider. The events panel lives below the map in the narrow
+	// layout (so we still have to reserve rows for it there), but in
+	// the wide layout it moves into the right column under Stats —
+	// reclaiming those rows for the map grid so the viewport fills the
+	// freed vertical space instead of leaving it blank beneath the map
+	// box.
+	h := termH - gridBoxChromeV -
+		mapHeaderRows - mapStatusDividerRows - mapStatusRows
+	if termW < minTermWidth {
+		h -= eventsRows
+	}
 
 	if w < minViewportW {
 		w = minViewportW

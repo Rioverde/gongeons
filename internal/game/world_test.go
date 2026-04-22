@@ -233,3 +233,125 @@ type tileSourceFn func(x, y int) Tile
 func (f tileSourceFn) TileAt(x, y int) Tile { return f(x, y) }
 
 var _ = reflect.DeepEqual // silence unused if tests above shrink
+
+func TestWorldTick_IncrementsCurrentTick(t *testing.T) {
+	w := newTestWorld(testTiles{})
+	if w.CurrentTick() != 0 {
+		t.Fatalf("freshly built world has currentTick=%d, want 0", w.CurrentTick())
+	}
+	_ = w.Tick()
+	if w.CurrentTick() != 1 {
+		t.Fatalf("after one Tick, currentTick=%d, want 1", w.CurrentTick())
+	}
+	for range 10 {
+		_ = w.Tick()
+	}
+	if w.CurrentTick() != 11 {
+		t.Fatalf("after 11 Ticks, currentTick=%d, want 11", w.CurrentTick())
+	}
+}
+
+func TestWorldTick_NoCalendarEmitsNoBoundary(t *testing.T) {
+	w := newTestWorld(testTiles{})
+	for range 100 {
+		events := w.Tick()
+		for _, e := range events {
+			switch e.(type) {
+			case MonthChangedEvent, SeasonChangedEvent, YearStartedEvent:
+				t.Fatalf("calendar boundary event emitted without a wired Calendar: %T", e)
+			}
+		}
+	}
+}
+
+func TestWorldTick_CalendarBoundaryEvents(t *testing.T) {
+	// Short cadence: 2 ticksPerDay, 3 daysPerMonth, 4 monthsPerYear = 24 ticks/year
+	cal := NewCalendar(2, 3, 4, 0)
+	w := NewWorld(
+		tileSourceFn(func(x, y int) Tile { return Tile{Terrain: TerrainPlains} }),
+		WithCalendar(cal),
+	)
+
+	type counts struct {
+		month, season, year int
+	}
+	observed := map[int64]counts{} // tick -> counts
+
+	for i := 1; i <= 48; i++ { // 2 full years
+		events := w.Tick()
+		c := counts{}
+		for _, e := range events {
+			switch ev := e.(type) {
+			case MonthChangedEvent:
+				c.month++
+				if ev.AtTick != int64(i) {
+					t.Errorf("tick %d: MonthChanged AtTick=%d", i, ev.AtTick)
+				}
+			case SeasonChangedEvent:
+				c.season++
+			case YearStartedEvent:
+				c.year++
+			}
+		}
+		observed[int64(i)] = c
+	}
+
+	// Month boundaries: every 6 ticks (3 days × 2 t/day) for 48 ticks = 8 rollovers.
+	// Season boundaries: every 3 months (once per 18 ticks) = 2 per year × 2 years = 4... wait,
+	// seasons derive from month via SeasonOf. With 4 months/year (Jan..Apr), season map:
+	//   Jan=Winter, Feb=Winter, Mar=Spring, Apr=Spring
+	// So per year we get 1 season change: Feb→Mar (at tick 12, start of month 3).
+	// Over 2 years: 4 season changes (one at each Mar start and one at each Jan wrap back to Winter).
+	// Actually Apr→Jan is Spring→Winter, so tick 24 (year rollover) fires season change too.
+	// Total: season changes at ticks 12, 24, 36, 48 = 4.
+	totalMonth, totalSeason, totalYear := 0, 0, 0
+	for _, c := range observed {
+		totalMonth += c.month
+		totalSeason += c.season
+		totalYear += c.year
+	}
+	if totalMonth != 8 {
+		t.Errorf("MonthChangedEvent total over 2 years = %d, want 8", totalMonth)
+	}
+	if totalYear != 2 {
+		t.Errorf("YearStartedEvent total over 2 years = %d, want 2", totalYear)
+	}
+	if totalSeason != 4 {
+		t.Errorf("SeasonChangedEvent total over 2 years = %d, want 4", totalSeason)
+	}
+
+	// Spot-check: year boundary tick = 24 has all three events.
+	yearTick := observed[24]
+	if yearTick.year != 1 || yearTick.season != 1 || yearTick.month != 1 {
+		t.Errorf("tick 24 (year boundary) counts = %+v, want {1,1,1}", yearTick)
+	}
+}
+
+func TestWorldGameTime_NoCalendar(t *testing.T) {
+	w := newTestWorld(testTiles{})
+	gt := w.GameTime()
+	if gt != (GameTime{}) {
+		t.Errorf("GameTime() without calendar = %+v, want zero value", gt)
+	}
+}
+
+func TestWorldGameTime_WithCalendar(t *testing.T) {
+	cal := NewCalendar(10, 5, 4, 0)
+	w := NewWorld(
+		tileSourceFn(func(x, y int) Tile { return Tile{Terrain: TerrainPlains} }),
+		WithCalendar(cal),
+	)
+	gt0 := w.GameTime()
+	if gt0.Year != 0 || gt0.Month != MonthJanuary || gt0.DayOfMonth != 1 {
+		t.Errorf("initial GameTime = %+v, want Year 0 January day 1", gt0)
+	}
+	for range 50 {
+		_ = w.Tick()
+	}
+	// Tick 50 = day 5, month 1 = (5 days × 10 ticks/day = 50 ticks in month 1, day 5+1=6... wait)
+	// actually 50 ticks / 10 = 5 whole days, so dayIdx = 0, totalMonths = 1 → Month = February day 1.
+	gt := w.GameTime()
+	if gt.Month != MonthFebruary || gt.DayOfMonth != 1 {
+		t.Errorf("GameTime after 50 ticks = %+v, want February day 1", gt)
+	}
+}
