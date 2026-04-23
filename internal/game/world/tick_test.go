@@ -708,8 +708,14 @@ func TestPlayerMoveBlockedByMonster(t *testing.T) {
 func TestAddMonsterIdempotent(t *testing.T) {
 	w := newTickTestWorld(t)
 
-	m1 := &entity.Monster{ID: "x", Name: "First", Stats: stats.DefaultCoreStats(), Speed: stats.SpeedNormal}
-	m2 := &entity.Monster{ID: "x", Name: "Second", Stats: stats.DefaultCoreStats(), Speed: stats.SpeedFast}
+	m1 := &entity.Monster{Character: entity.Character{
+		ID: "x", Name: "First", Stats: stats.DefaultCoreStats(),
+		DerivedStats: entity.DerivedStats{Speed: stats.SpeedNormal},
+	}}
+	m2 := &entity.Monster{Character: entity.Character{
+		ID: "x", Name: "Second", Stats: stats.DefaultCoreStats(),
+		DerivedStats: entity.DerivedStats{Speed: stats.SpeedFast},
+	}}
 	w.AddMonster(m1)
 	w.AddMonster(m2)
 
