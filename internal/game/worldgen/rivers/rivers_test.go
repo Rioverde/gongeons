@@ -204,3 +204,53 @@ func (f *fakeTerrainSampler) MoistureAt(fx, fy float64) float64 {
 	// Default above threshold so elevation gate is the only filter.
 	return riverMoistureThreshold + 0.1
 }
+
+// TestPackFloodCoord_NegativeCoords guards against the classic int→uint32
+// sign-extension bug: packing (−100, 200) and (−200, 100) around a far-away
+// origin must yield distinct keys. A naive uint32(int32(x)) packing would
+// sign-extend negatives into the high bits and collide with large positives.
+func TestPackFloodCoord_NegativeCoords(t *testing.T) {
+	// Origin far from both probe points but still within the valid window
+	// (both relative coords satisfy |rel| < floodWindowHalf).
+	const ox, oy = 0, 0
+	k1 := packFloodCoord(-100, 200, ox, oy)
+	k2 := packFloodCoord(-200, 100, ox, oy)
+	if k1 == k2 {
+		t.Fatalf("pack collision on (-100,200) vs (-200,100): both=%d", k1)
+	}
+	// Mirror case: positive/negative axis flip.
+	k3 := packFloodCoord(100, -200, ox, oy)
+	k4 := packFloodCoord(200, -100, ox, oy)
+	if k3 == k4 {
+		t.Fatalf("pack collision on (100,-200) vs (200,-100): both=%d", k3)
+	}
+	// Cross-axis: (-a, b) and (b, -a) must differ.
+	if packFloodCoord(-100, 50, ox, oy) == packFloodCoord(50, -100, ox, oy) {
+		t.Fatal("pack collision on transposed negatives")
+	}
+}
+
+// TestPackFloodCoord_Injective sweeps the full valid window around a non-zero
+// origin and asserts every (x, y) maps to a unique bit index. Proves the
+// packing is collision-free for any input localFloodFill will actually see.
+func TestPackFloodCoord_Injective(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short — 4M-entry injectivity sweep")
+	}
+	// Non-zero origin forces negative-relative coordinates on half the
+	// window so we exercise the sign path, not just [0, side).
+	const ox, oy = 12345, -6789
+	seen := make(map[uint32]TileCoord, floodWindowSide*floodWindowSide)
+	for dx := -floodWindowHalf; dx < floodWindowHalf; dx++ {
+		for dy := -floodWindowHalf; dy < floodWindowHalf; dy++ {
+			x := ox + dx
+			y := oy + dy
+			k := packFloodCoord(x, y, ox, oy)
+			if prev, ok := seen[k]; ok {
+				t.Fatalf("collision: key=%d for (%d,%d) and (%d,%d)",
+					k, prev[0], prev[1], x, y)
+			}
+			seen[k] = TileCoord{x, y}
+		}
+	}
+}

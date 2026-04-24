@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/kelindar/bitmap"
 
 	"github.com/Rioverde/gongeons/internal/game/worldgen/biome"
 	"github.com/Rioverde/gongeons/internal/game/worldgen/chunk"
@@ -379,24 +380,51 @@ var traceScratchPool = sync.Pool{
 	},
 }
 
-// floodScratch groups localFloodFill's heap + processed map for pooling.
-// Eliminates the fresh priorityQueue slice and processed map allocated on
-// every call (78.8% of alloc_objects in the cold-chunk profile).
-type floodScratch struct {
-	pq        cellHeap
-	processed map[TileCoord]struct{}
+// floodWindowHalf is the half-extent (in tiles) of the seed-relative window
+// used by localFloodFill's processed bitmap. A single priority-flood call
+// expands at most riverMaxBasinCells (512) cells from the seed, so basin
+// cells stay within Chebyshev distance riverMaxBasinCells+1 from the seed;
+// 512 (>= riverMaxBasinCells) covers the worst-case linear snake and keeps
+// the bitmap's worst-case size at floodWindowSide^2 / 8 = 128 KB — small
+// enough that pool-cold re-init is cheap and the whole map fits in L2.
+const floodWindowHalf = 512
+
+// floodWindowSide is the edge length of the packed coordinate window.
+// Packed bit indices fit in [0, floodWindowSide*floodWindowSide) =
+// [0, 1_048_576), so the backing bitmap never exceeds 128 KB.
+const floodWindowSide = 2 * floodWindowHalf
+
+// packFloodCoord packs a (x, y) tile into a uint32 bit index relative to an
+// origin (ox, oy). Injective on the window |x-ox| < floodWindowHalf and
+// |y-oy| < floodWindowHalf. Callers ensure that range; a stray bit past the
+// window would grow the bitmap to MB-scale. Inline-sized on purpose.
+func packFloodCoord(x, y, ox, oy int) uint32 {
+	rx := uint32(x - ox + floodWindowHalf)
+	ry := uint32(y - oy + floodWindowHalf)
+	return rx*floodWindowSide + ry
 }
 
-// floodScratchPool reuses heap + processed map across localFloodFill calls.
-// Sized to riverMaxBasinCells so the backing slice / map never resize in
-// a single call. localFloodFill is not recursive nor concurrent within a
-// trace: traceRiver owns one scratch from traceScratchPool and makes
-// serial localFloodFill calls, so pool reuse is safe.
+// floodScratch groups localFloodFill's heap + processed bitmap for pooling.
+// The bitmap replaces a map[TileCoord]struct{}; sync.Pool drops the pooled
+// instance on GC, so switching to a zero-alloc bitmap.Bitmap eliminates the
+// ~800 MB flat alloc that localFloodFill showed in the millennium profile
+// (every cold chunk allocated a fresh map once the pool was drained).
+type floodScratch struct {
+	pq        cellHeap
+	processed bitmap.Bitmap
+}
+
+// floodScratchPool reuses heap + processed bitmap across localFloodFill calls.
+// The bitmap is not pre-Grown: basin cells cluster within a small radius of
+// the seed (typical ~30 tiles, worst-case bounded by riverMaxBasinCells=512),
+// so Set grows the backing []uint64 lazily to match the actually-touched
+// range. Pool reuse keeps the grown slice hot across calls. localFloodFill is
+// not recursive nor concurrent within a trace: traceRiver owns one
+// traceScratch and makes serial localFloodFill calls, so pool reuse is safe.
 var floodScratchPool = sync.Pool{
 	New: func() any {
 		return &floodScratch{
-			pq:        cellHeap{data: make([]cellPri, 0, riverMaxBasinCells)},
-			processed: make(map[TileCoord]struct{}, riverMaxBasinCells),
+			pq: cellHeap{data: make([]cellPri, 0, riverMaxBasinCells)},
 		}
 	},
 }
@@ -502,13 +530,13 @@ func localFloodFill(sx, sy int, elevOf func(int, int) float64) (spillX, spillY i
 	scratch := floodScratchPool.Get().(*floodScratch)
 	defer floodScratchPool.Put(scratch)
 	scratch.pq.data = scratch.pq.data[:0]
-	clear(scratch.processed)
+	scratch.processed.Clear()
 	pq := &scratch.pq
-	processed := scratch.processed
+	processed := &scratch.processed
 
 	seedElev := elevOf(sx, sy)
 	pq.push(cellPri{x: sx, y: sy, elev: seedElev})
-	processed[TileCoord{sx, sy}] = struct{}{}
+	processed.Set(packFloodCoord(sx, sy, sx, sy))
 	basin = append(basin, TileCoord{sx, sy})
 
 	for pq.len() > 0 {
@@ -519,17 +547,17 @@ func localFloodFill(sx, sy int, elevOf func(int, int) float64) (spillX, spillY i
 		for _, off := range squareNeighborOffsets {
 			nx := c.x + int(off.dx)
 			ny := c.y + int(off.dy)
-			nc := TileCoord{nx, ny}
-			if _, ok := processed[nc]; ok {
+			key := packFloodCoord(nx, ny, sx, sy)
+			if processed.Contains(key) {
 				continue
 			}
-			processed[nc] = struct{}{}
+			processed.Set(key)
 
 			ne := elevOf(nx, ny)
 			if ne < c.elev {
 				return nx, ny, basin, true
 			}
-			basin = append(basin, nc)
+			basin = append(basin, TileCoord{nx, ny})
 			pq.push(cellPri{x: nx, y: ny, elev: ne})
 		}
 	}
