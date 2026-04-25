@@ -75,7 +75,7 @@ type Landmark struct {
 // when reporting landmarks inside a super-chunk. The interface lives
 // in this package because World consumes it — per Go interface-design
 // guidance, interfaces belong at the consumer. Implementations live
-// outside (e.g. worldgen.NoiseLandmarkSource).
+// outside (e.g. worldgen.LandmarkSource).
 //
 // Implementations must be deterministic: same SuperChunkCoord yields
 // the same []Landmark every call (including order), and must be safe

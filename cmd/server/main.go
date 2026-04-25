@@ -21,8 +21,8 @@ import (
 	wishlog "github.com/charmbracelet/wish/logging"
 	"google.golang.org/grpc"
 
-	"github.com/Rioverde/gongeons/internal/game/world"
 	"github.com/Rioverde/gongeons/internal/game/calendar"
+	"github.com/Rioverde/gongeons/internal/game/world"
 	"github.com/Rioverde/gongeons/internal/game/worldgen"
 	pb "github.com/Rioverde/gongeons/internal/proto"
 	"github.com/Rioverde/gongeons/internal/server"
@@ -45,11 +45,12 @@ func main() {
 // Keeping the body out of main follows Mat Ryer's "run() returns error" pattern.
 func run() error {
 	var (
-		addr     string
-		sshAddr  string
-		hostKey  string
-		logLevel string
-		seed     int64
+		addr      string
+		sshAddr   string
+		hostKey   string
+		logLevel  string
+		seed      int64
+		worldSize string
 	)
 	flag.StringVar(&addr, "addr", ":50051", "gRPC listen address")
 	flag.StringVar(&sshAddr, "ssh-addr", ":2222", "SSH listen address")
@@ -57,16 +58,25 @@ func run() error {
 		"SSH host key path (auto-generated on first run)")
 	flag.StringVar(&logLevel, "log-level", "info", "log level: debug | info | warn | error")
 	flag.Int64Var(&seed, "seed", 0, "world seed; 0 = random from wall clock")
+	flag.StringVar(&worldSize, "world-size", "standard",
+		"world size preset: tiny | small | standard | large | huge | colossal | gigantic")
 	flag.Parse()
 
 	if seed == 0 {
 		seed = time.Now().UnixNano()
 	}
 
+	size, err := worldgen.ParseWorldSize(worldSize)
+	if err != nil {
+		return fmt.Errorf("parse world size: %w", err)
+	}
+
 	logger := newLogger(logLevel)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	gameWorld := buildWorld(seed, size, logger)
 
 	var lc net.ListenConfig
 	lis, err := lc.Listen(ctx, "tcp", addr)
@@ -75,7 +85,7 @@ func run() error {
 	}
 
 	grpcSrv := grpc.NewServer()
-	svc := server.NewService(buildWorld(seed), logger)
+	svc := server.NewService(gameWorld, logger)
 	pb.RegisterGameServiceServer(grpcSrv, svc)
 
 	go svc.Run(ctx)
@@ -137,23 +147,34 @@ func run() error {
 	return nil
 }
 
-// buildWorld constructs the production world: a procedural tile source keyed
-// on seed, a matching NoiseRegionSource for Voronoi regions, a
-// NoiseLandmarkSource for Layer 1.5 landmarks, a NoiseVolcanoSource for the
-// multi-tile volcano layer, a NoiseDepositSource for the resource-deposit
-// layer, and the seed itself threaded through so AnchorAt stays
-// deterministic. Split out of run for testability and so the wiring is
-// visible at a glance. Source order matters: the volcano source
-// depends on the landmark source for anchor-collision rejection, and
-// the deposit source depends on both volcano (for obsidian / sulfur
-// structural placement) and landmark (for point-like collision
-// rejection), so deposits are constructed last.
-func buildWorld(seed int64) *world.World {
-	wg := worldgen.NewChunkedSource(seed)
-	regionSrc := worldgen.NewNoiseRegionSource(seed, wg.Generator())
-	landmarkSrc := worldgen.NewNoiseLandmarkSource(seed, regionSrc, wg.Generator())
-	volcanoSrc := worldgen.NewNoiseVolcanoSource(seed, wg.Generator(), landmarkSrc)
-	depositSrc := worldgen.NewNoiseDepositSource(seed, wg.Generator(), landmarkSrc, volcanoSrc)
+// buildWorld constructs the production world: the bounded worldgen
+// pipeline runs once at boot, producing a *worldgen.World that doubles
+// as the world.TileSource. Real region/landmark/volcano/deposit sources
+// stack on top; the volcano source is wrapped in the server-side LRU
+// cache so hot-path snapshot rebuilds skip a map read on repeat queries.
+//
+// Source order matters: volcanoes are placed before landmarks because
+// landmark placement rejects tiles inside any volcano core or slope
+// ring. Deposits are built last so biome terrain (post-classification)
+// is fully settled before placement weights are evaluated.
+func buildWorld(seed int64, size worldgen.WorldSize, logger *slog.Logger) *world.World {
+	t0 := time.Now()
+	wgWorld := worldgen.Generate(seed, size)
+	genDur := time.Since(t0)
+	logger.Info("worldgen complete",
+		"size", size.Label(),
+		"width", wgWorld.Width,
+		"height", wgWorld.Height,
+		"seed", seed,
+		"duration", genDur,
+	)
+
+	regionSrc := worldgen.NewRegionSource(wgWorld, seed)
+	volcanoSrc := worldgen.NewVolcanoSource(wgWorld, seed)
+	landmarkSrc := worldgen.NewLandmarkSource(wgWorld, seed, regionSrc, volcanoSrc)
+
+	depositSrc := worldgen.NewDepositSource(wgWorld, seed, volcanoSrc)
+
 	cal := calendar.NewCalendar(
 		calendar.DefaultCalendarConfig.TicksPerDay,
 		calendar.DefaultCalendarConfig.DaysPerMonth,
@@ -161,7 +182,7 @@ func buildWorld(seed int64) *world.World {
 		calendar.DefaultEpochOffset(seed),
 	)
 	return world.NewWorld(
-		wg,
+		wgWorld,
 		world.WithSeed(seed),
 		world.WithRegionSource(regionSrc),
 		world.WithLandmarkSource(landmarkSrc),

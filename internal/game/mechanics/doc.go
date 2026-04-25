@@ -11,7 +11,7 @@
 // perturb another subsystem's sequence.
 //
 // TickCityYear composes the individual steps into the canonical order.
-// Callers (the WorldGenerator at Pass-2 time, the per-year tick loop at
-// runtime) should prefer TickCityYear over invoking the steps
+// Callers (the worldgen pipeline at Pass-2 time, the per-year tick loop
+// at runtime) should prefer TickCityYear over invoking the steps
 // directly.
 package mechanics

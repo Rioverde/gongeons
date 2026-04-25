@@ -166,7 +166,7 @@ type Region struct {
 // super-chunk. The interface lives in this package because World
 // consumes it — per Go interface-design guidance, interfaces belong at
 // the consumer. Implementations live outside (e.g.
-// worldgen.NoiseRegionSource).
+// worldgen.RegionSource).
 //
 // No language argument: names are emitted as structured Parts records
 // and the client composes localized display text. Implementations must
