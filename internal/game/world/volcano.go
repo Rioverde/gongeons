@@ -132,7 +132,7 @@ func (v Volcano) ZoneAt(t geom.Position) VolcanoZone {
 // tile's volcanic terrain override. The interface lives in this
 // package because World consumes it — per Go interface-design guidance,
 // interfaces belong at the consumer. Implementations live outside
-// (e.g. a future worldgen.NoiseVolcanoSource).
+// (e.g. worldgen.VolcanoSource).
 //
 // Implementations must be deterministic: same SuperChunkCoord yields
 // the same []Volcano every call (including order), same Position yields

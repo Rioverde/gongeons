@@ -16,12 +16,12 @@ const DefaultVolcanoCacheCapacity = 128
 
 // volcanoCache wraps a world.VolcanoSource with a fixed-size LRU keyed by
 // SuperChunkCoord. Volcano placement is deterministic and driven by
-// per-super-region generation, which the underlying NoiseVolcanoSource
-// already memoizes via sync.Map; this cache layers a smaller,
-// hot-path-only lookup so repeated snapshots on the same super-chunk
-// skip a map read plus the per-super-region fan-out entirely.
-// The shared lruCache helper is safe for concurrent use, so volcanoCache
-// has no additional synchronisation of its own.
+// per-super-region generation, which the underlying *worldgen.VolcanoSource
+// already memoizes (its bySC map is built once at construction); this
+// cache layers a smaller, hot-path-only lookup so repeated snapshots on
+// the same super-chunk skip a map read plus the per-super-region fan-out
+// entirely. The shared lruCache helper is safe for concurrent use, so
+// volcanoCache has no additional synchronisation of its own.
 type volcanoCache struct {
 	source world.VolcanoSource
 	lru    *lruCache[geom.SuperChunkCoord, []world.Volcano]
@@ -50,13 +50,13 @@ func (c *volcanoCache) VolcanoAt(sc geom.SuperChunkCoord) []world.Volcano {
 }
 
 // TerrainOverrideAt passes straight through to the underlying source.
-// The production NoiseVolcanoSource already caches per-super-region
-// override data internally via sync.Map, so layering a tile-level LRU
-// on top here would duplicate work without meaningful gains and make
-// eviction reasoning harder — a moving viewport touches thousands of
-// unique tiles per session while the super-region cache only ever
-// holds a handful of entries. Document this explicitly so future
-// readers do not add a redundant LRU.
+// The production *worldgen.VolcanoSource already resolves overrides
+// against a single flat map built once at construction, so layering a
+// tile-level LRU on top here would duplicate work without meaningful
+// gains and make eviction reasoning harder — a moving viewport touches
+// thousands of unique tiles per session while the per-super-region
+// volcano list cache only ever holds a handful of entries. Document
+// this explicitly so future readers do not add a redundant LRU.
 func (c *volcanoCache) TerrainOverrideAt(t geom.Position) (world.Terrain, bool) {
 	return c.source.TerrainOverrideAt(t)
 }

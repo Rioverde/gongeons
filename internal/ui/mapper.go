@@ -24,7 +24,7 @@ func positionFromPB(p *pb.Position) geom.Position {
 
 // applyJoinAccepted folds the JoinAccepted reply into the Model. The player
 // ID anchors "me" on every subsequent snapshot; the world seed spins up a
-// local NoiseRegionSource whose only job is per-tile tint sampling in
+// local InfluenceSampler whose only job is per-tile tint sampling in
 // renderCell. Region identity — the name and character shown in the status
 // bar, and the SuperChunkCoord used for crossing detection — always arrives
 // via Snapshot.Region, never derived client-side. Keeping the two flows

@@ -36,7 +36,7 @@ type connectedMsg struct {
 // acceptedMsg is the JoinAccepted reply — carries the server-assigned ID,
 // the authoritative world seed, and the immutable calendar cadence. The
 // seed is stored read-only on the Model so the client can construct a
-// local NoiseRegionSource for cosmetic per-tile tint sampling; gameplay
+// local InfluenceSampler for cosmetic per-tile tint sampling; gameplay
 // identity (region name, character) always travels on the wire inside
 // Snapshot.Region. The calendar is stashed so rendering code can read
 // the cadence (e.g. to derive time-of-day later) without another server
