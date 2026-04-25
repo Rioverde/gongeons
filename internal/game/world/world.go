@@ -149,10 +149,11 @@ func WithCalendar(c calendar.Calendar) WorldOption {
 }
 
 // NewWorld constructs an infinite World around the given TileSource. Use
-// worldgen.NewChunkedSource for the procedural production source, or
-// NewWorldFromSource with a test-painted source for deterministic unit
-// tests. Optional seed and RegionSource configuration arrive as functional
-// options; omit them for back-compatible default construction.
+// worldgen.Generate for the procedural production source (the returned
+// *worldgen.World implements TileSource), or NewWorldFromSource with a
+// test-painted source for deterministic unit tests. Optional seed and
+// RegionSource configuration arrive as functional options; omit them for
+// back-compatible default construction.
 func NewWorld(source TileSource, opts ...WorldOption) *World {
 	return NewWorldFromSource(source, opts...)
 }

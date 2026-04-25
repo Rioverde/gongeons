@@ -6,6 +6,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/Rioverde/gongeons/internal/game/geom"
+	gworld "github.com/Rioverde/gongeons/internal/game/world"
 	"github.com/Rioverde/gongeons/internal/game/worldgen"
 )
 
@@ -41,6 +43,10 @@ const (
 	layerMoisture
 	layerCoast
 	layerWatershed
+	layerVolcanoes
+	layerRegions
+	layerLandmarks
+	layerDeposits
 	layerCount
 )
 
@@ -60,6 +66,14 @@ func (l layer) String() string {
 		return "coast"
 	case layerWatershed:
 		return "watershed"
+	case layerVolcanoes:
+		return "volcanoes"
+	case layerRegions:
+		return "regions"
+	case layerLandmarks:
+		return "landmarks"
+	case layerDeposits:
+		return "deposits"
 	}
 	return "unknown"
 }
@@ -85,13 +99,22 @@ type Model struct {
 	pendingSeed int64
 
 	// Viewer phase.
-	world    *worldgen.World
-	layer    layer
-	zoom     int
-	vpX, vpY int
-	termW    int
-	termH    int
-	showInfo bool
+	world          *worldgen.World
+	showRegionTint bool // true → biome layer overlays region character tint
+	volcanoSrc     gworld.VolcanoSource
+	regionSrc      gworld.RegionSource
+	landmarkSrc   gworld.LandmarkSource
+	landmarkIndex map[uint64]gworld.Landmark
+	landmarkList  []gworld.Landmark
+	depositSrc    gworld.DepositSource
+	depositIndex  map[uint64]gworld.Deposit
+	layer         layer
+	zoom          int
+	vpX, vpY      int
+	termW         int
+	termH         int
+	showInfo   bool
+	showLegend bool
 }
 
 func initialModel() Model {
@@ -142,6 +165,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.zoom = pickInitialZoom(msg.world.Width, msg.world.Height, m.termW, m.termH)
 		m.vpX = 0
 		m.vpY = 0
+		w := msg.world
+		volcSrc := worldgen.NewVolcanoSource(w, w.Seed)
+		regionSrc := worldgen.NewRegionSource(w, w.Seed)
+		landmarkSrc := worldgen.NewLandmarkSource(w, w.Seed, regionSrc, volcSrc)
+		depositSrc := worldgen.NewDepositSource(w, w.Seed, volcSrc)
+		m.volcanoSrc = volcSrc
+		m.regionSrc = regionSrc
+		m.landmarkSrc = landmarkSrc
+		m.landmarkIndex, m.landmarkList = buildLandmarkIndex(w, landmarkSrc)
+		m.depositSrc = depositSrc
+		m.depositIndex = buildDepositIndex(depositSrc)
 		return m, nil
 	}
 
@@ -175,6 +209,45 @@ func buildCmd(size worldgen.WorldSize, seed int64) tea.Cmd {
 
 func randomSeedString() string {
 	return formatSeed(int64(rand.Uint64()))
+}
+
+// buildLandmarkIndex walks every super-chunk that intersects the world bounds
+// and accumulates all landmark coords into a flat map keyed by packed XY so
+// per-tile lookups are O(1) during rendering. It also returns a flat slice for
+// bbox-scan at high zoom levels. Built once at world load.
+func buildLandmarkIndex(w *worldgen.World, src gworld.LandmarkSource) (map[uint64]gworld.Landmark, []gworld.Landmark) {
+	idx := make(map[uint64]gworld.Landmark)
+	var list []gworld.Landmark
+	scW := (w.Width + geom.SuperChunkSize - 1) / geom.SuperChunkSize
+	scH := (w.Height + geom.SuperChunkSize - 1) / geom.SuperChunkSize
+	for sy := 0; sy < scH; sy++ {
+		for sx := 0; sx < scW; sx++ {
+			sc := geom.SuperChunkCoord{X: sx, Y: sy}
+			for _, lm := range src.LandmarksIn(sc) {
+				key := uint64(lm.Coord.X)<<32 | uint64(uint32(lm.Coord.Y))
+				idx[key] = lm
+				list = append(list, lm)
+			}
+		}
+	}
+	return idx, list
+}
+
+// buildDepositIndex flattens a DepositSource into a packed-XY map for O(1)
+// per-tile lookups during rendering. Built once at world load.
+func buildDepositIndex(src gworld.DepositSource) map[uint64]gworld.Deposit {
+	if src == nil {
+		return nil
+	}
+	// Query the entire world by using an enormous rect — DepositSource.sorted
+	// is already a complete list; DepositsIn with a huge rect returns everything.
+	all := src.DepositsIn(geom.Rect{MinX: -1 << 20, MinY: -1 << 20, MaxX: 1 << 20, MaxY: 1 << 20})
+	idx := make(map[uint64]gworld.Deposit, len(all))
+	for _, d := range all {
+		key := uint64(d.Position.X)<<32 | uint64(uint32(d.Position.Y))
+		idx[key] = d
+	}
+	return idx
 }
 
 func pickInitialZoom(worldW, worldH, termW, termH int) int {
